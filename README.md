@@ -16,8 +16,8 @@ Code is open source, permissively licensed under Apache 2.0, and available at [h
 
 ## Usage
 
-1. Download the `Source code (zip)` from the [latest release](https://github.com/dcroote/lambs/releases/latest)
-2. Extract the zip file and open `index.html` in your web browser
+1. Download `index.html` from the [latest release](https://github.com/dcroote/lambs/releases/latest)
+2. Open `index.html` in your web browser
 3. Enter your VH and VL amino acid sequences and click "Analyze"
 4. View the results
 5. Make better antibodies for humankind!
