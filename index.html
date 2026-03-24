@@ -226,8 +226,203 @@ h1 {
 #legend .l-aromatic { color: #996600; }
 #legend .l-special { color: #dd6600; }
 
+.tab-bar {
+  display: flex;
+  gap: 0;
+  margin-bottom: 0;
+}
+
+.tab-btn {
+  font-family: 'Consolas', 'Courier New', Courier, monospace;
+  font-size: 13px;
+  padding: 8px 24px;
+  background: #e8e8e8;
+  color: #555;
+  border: 1px solid #ccc;
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  margin-right: 2px;
+}
+
+.tab-btn:hover { background: #ddd; }
+
+.tab-btn.active {
+  background: #fff;
+  color: #1a1a1a;
+  font-weight: bold;
+  border-bottom: 1px solid #fff;
+  position: relative;
+  z-index: 1;
+}
+
+.tab-panel {
+  border-top: 1px solid #ccc;
+  padding-top: 16px;
+  margin-top: -1px;
+}
+
+.basket-section {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.basket-section h3 {
+  font-size: 0.95em;
+  margin-bottom: 10px;
+  color: #333;
+}
+
+.basket-upload-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.basket-upload-row label {
+  font-size: 0.9em;
+  font-weight: bold;
+}
+
+.basket-table-wrap {
+  overflow-x: auto;
+  margin: 8px 0;
+}
+
+.basket-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.basket-table th, .basket-table td {
+  text-align: left;
+  padding: 4px 8px;
+  border-bottom: 1px solid #eee;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 300px;
+}
+
+.basket-table th {
+  background: #f8f8f8;
+  font-weight: bold;
+  color: #555;
+  border-bottom: 2px solid #ddd;
+}
+
+.basket-table tr:hover { background: #f9f9fb; }
+
+.basket-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+  align-items: center;
+}
+
+.btn {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  padding: 6px 18px;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.btn-primary { background: #2266cc; color: #fff; }
+.btn-primary:hover { background: #1a4f99; }
+.btn-danger { background: #cc4444; color: #fff; }
+.btn-danger:hover { background: #a33; }
+.btn-secondary { background: #888; color: #fff; }
+.btn-secondary:hover { background: #666; }
+.btn-sm { padding: 2px 10px; font-size: 12px; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+
+.cluster-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.cluster-controls label {
+  font-size: 0.9em;
+  font-weight: bold;
+}
+
+.cluster-controls input[type="number"] {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  width: 60px;
+  padding: 4px 6px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+}
+
+.cluster-panel {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.cluster-panel h2 {
+  font-size: 1.05em;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.msa-section-title {
+  font-size: 0.9em;
+  font-weight: bold;
+  color: #555;
+  margin: 14px 0 6px 0;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 3px;
+}
+
+.conservation-row {
+  white-space: pre;
+  font-size: 13px;
+  line-height: 1.35;
+  height: 32px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.cons-bar {
+  display: inline-block;
+  width: 1ch;
+  vertical-align: bottom;
+  flex-shrink: 0;
+}
+
+.msa-label { width: 16ch; }
+
+.basket-status {
+  font-size: 0.85em;
+  color: #22aa44;
+  margin-left: 8px;
+  opacity: 1;
+  transition: opacity 0.5s;
+}
+
+.basket-count {
+  font-size: 0.85em;
+  color: #555;
+  margin-left: auto;
+}
+
 @media (max-width: 768px) {
   .input-row { flex-direction: column; }
+  .basket-upload-row { flex-direction: column; align-items: flex-start; }
+  .cluster-controls { flex-direction: column; align-items: flex-start; }
 }
 </style>
 </head>
@@ -235,78 +430,117 @@ h1 {
 <div class="container">
   <h1>mAb Variable Region Sequence Analysis</h1>
 
-  <div class="input-section">
-    <div class="input-row">
-      <div class="input-group">
-        <label for="vh-input">VH Sequence</label>
-        <textarea id="vh-input" rows="3" placeholder="Paste VH amino acid sequence (or FASTA)..."></textarea>
-      </div>
-      <div class="input-group">
-        <label for="vl-input">VL Sequence</label>
-        <textarea id="vl-input" rows="3" placeholder="Paste VL amino acid sequence (or FASTA)..."></textarea>
-      </div>
-    </div>
-    <div class="controls-row">
-      <button id="analyze-btn">Analyze</button>
-    </div>
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="single">Single Sequence Analysis</button>
+    <button class="tab-btn" data-tab="multi">Multiple Sequence Analysis</button>
   </div>
 
-  <div id="results"></div>
+  <div id="tab-single" class="tab-panel">
 
-  <div id="legend" class="legend" style="display:none">
-    <h3>Legend</h3>
-    <div class="legend-section">
-      <strong>Sequence Liability Tracks</strong>
-      <div class="legend-row"><span class="liability-char">Red</span> = liability residue(s) &nbsp; <span class="context-char">Gray</span> = flanking context (&plusmn;3 residues)</div>
-      <div class="legend-row">Unp. Cys &mdash; Unpaired cysteine (odd count of C in chain)</div>
-      <div class="legend-row">Met Ox &mdash; Methionine oxidation (M)</div>
-      <div class="legend-row">Glycosyl &mdash; N-linked glycosylation (N-X-S/T, X&ne;P)</div>
-      <div class="legend-row">Deamid &mdash; Deamidation (NG, NS, NT, NN, NH)</div>
-      <div class="legend-row">Isomer &mdash; Isomerization (DG, DS)</div>
-      <div class="legend-row">Cleavage &mdash; Acid-labile cleavage (DP)</div>
-      <div class="legend-row">N-term Q &mdash; N-terminal Q (pyroglutamate formation risk)</div>
-    </div>
-    <div class="legend-section">
-      <strong>Amino Acid Property Colors</strong>
-      <label class="toggle-label legend-color-toggle" for="aa-color-toggle">
-        <input type="checkbox" id="aa-color-toggle" checked>
-        Color by amino acid property
-      </label>
-      <div class="legend-row legend-colors">
-        <span class="l-hydrophobic">A V I L M</span> Hydrophobic
+    <div class="input-section">
+      <div class="input-row">
+        <div class="input-group">
+          <label for="vh-input">VH Sequence</label>
+          <textarea id="vh-input" rows="3" placeholder="Paste VH amino acid sequence (or FASTA)..."></textarea>
+        </div>
+        <div class="input-group">
+          <label for="vl-input">VL Sequence</label>
+          <textarea id="vl-input" rows="3" placeholder="Paste VL amino acid sequence (or FASTA)..."></textarea>
+        </div>
       </div>
-      <div class="legend-row legend-colors">
-        <span class="l-aromatic">F W Y</span> Aromatic
-      </div>
-      <div class="legend-row legend-colors">
-        <span class="l-polar">S T N Q</span> Polar
-      </div>
-      <div class="legend-row legend-colors">
-        <span class="l-positive">K R H</span> Positive
-      </div>
-      <div class="legend-row legend-colors">
-        <span class="l-negative">D E</span> Negative
-      </div>
-      <div class="legend-row legend-colors">
-        <span class="l-special">C G P</span> Special
+      <div class="controls-row">
+        <button id="analyze-btn">Analyze</button>
+        <button id="add-to-basket-btn" class="btn btn-secondary">Add to Basket</button>
+        <span id="basket-status" class="basket-status" style="display:none"></span>
       </div>
     </div>
-    <div class="legend-section">
-      <strong>Germline Alignment</strong>
-      <div class="legend-row"><span class="mismatch-char">X</span> = mismatch (orange text) &nbsp; space = match or gap</div>
+
+    <div id="results"></div>
+
+    <div id="legend" class="legend" style="display:none">
+      <h3>Legend</h3>
+      <div class="legend-section">
+        <strong>Sequence Liability Tracks</strong>
+        <div class="legend-row"><span class="liability-char">Red</span> = liability residue(s) &nbsp; <span class="context-char">Gray</span> = flanking context (&plusmn;3 residues)</div>
+        <div class="legend-row">Unp. Cys &mdash; Unpaired cysteine (odd count of C in chain)</div>
+        <div class="legend-row">Met Ox &mdash; Methionine oxidation (M)</div>
+        <div class="legend-row">Glycosyl &mdash; N-linked glycosylation (N-X-S/T, X&ne;P)</div>
+        <div class="legend-row">Deamid &mdash; Deamidation (NG, NS, NT, NN, NH)</div>
+        <div class="legend-row">Isomer &mdash; Isomerization (DG, DS)</div>
+        <div class="legend-row">Cleavage &mdash; Acid-labile cleavage (DP)</div>
+        <div class="legend-row">N-term Q &mdash; N-terminal Q (pyroglutamate formation risk)</div>
+      </div>
+      <div class="legend-section">
+        <strong>Amino Acid Property Colors</strong>
+        <label class="toggle-label legend-color-toggle" for="aa-color-toggle">
+          <input type="checkbox" id="aa-color-toggle" checked>
+          Color by amino acid property
+        </label>
+        <div class="legend-row legend-colors">
+          <span class="l-hydrophobic">A V I L M</span> Hydrophobic
+        </div>
+        <div class="legend-row legend-colors">
+          <span class="l-aromatic">F W Y</span> Aromatic
+        </div>
+        <div class="legend-row legend-colors">
+          <span class="l-polar">S T N Q</span> Polar
+        </div>
+        <div class="legend-row legend-colors">
+          <span class="l-positive">K R H</span> Positive
+        </div>
+        <div class="legend-row legend-colors">
+          <span class="l-negative">D E</span> Negative
+        </div>
+        <div class="legend-row legend-colors">
+          <span class="l-special">C G P</span> Special
+        </div>
+      </div>
+      <div class="legend-section">
+        <strong>Germline Alignment</strong>
+        <div class="legend-row"><span class="mismatch-char">X</span> = mismatch (orange text) &nbsp; space = match or gap</div>
+      </div>
     </div>
+
   </div>
+
+  <div id="tab-multi" class="tab-panel" style="display:none">
+
+    <div class="basket-section">
+      <h3>Sequence Basket</h3>
+      <div class="basket-upload-row">
+        <label for="csv-upload">Upload CSV:</label>
+        <input type="file" id="csv-upload" accept=".csv,.txt">
+        <span id="csv-status" style="font-size:0.85em;color:#888"></span>
+      </div>
+      <div class="basket-table-wrap">
+        <table class="basket-table">
+          <thead>
+            <tr><th>#</th><th>Name</th><th>VH</th><th>VL</th><th></th></tr>
+          </thead>
+          <tbody id="basket-tbody"></tbody>
+        </table>
+      </div>
+      <div class="basket-actions">
+        <button id="clear-basket-btn" class="btn btn-danger btn-sm" disabled>Clear All</button>
+        <span class="basket-count"><span id="basket-count-num">0</span> sequence(s)</span>
+      </div>
+    </div>
+
+    <div class="cluster-controls">
+      <label for="cluster-threshold">Cluster identity threshold (%, combined VH and VL):</label>
+      <input type="number" id="cluster-threshold" value="70" min="1" max="100" step="1">
+      <button id="cluster-btn" class="btn btn-primary" disabled>Cluster &amp; Analyze</button>
+    </div>
+
+    <div id="multi-results"></div>
+
+  </div>
+
 </div>
 
 <script>
 // ================================================================
 // V GENE DATABASE
-// Replace empty strings below with amino acid sequences from IMGT.
-// Add as many genes as needed per family.
-// Format: "GeneName*Allele": "AMINOACIDSEQUENCE",
-//
-// Example:
-//   "IGHV1-2*01": "QVQLVQSGAEVKKPGASVKVSCKASGYTFT...",
 //
 // The dashboard will compare input sequences against all entries
 // to find the closest germline match.
@@ -2052,85 +2286,104 @@ function renderAlignmentBlock(aligned1, aligned2, geneName) {
 // CHAIN PANEL RENDERING
 // ================================================================
 
-function renderChainPanel(seq, chainType) {
-  let html = '<div class="chain-panel"><h2>' + chainType + ' Chain Analysis</h2>';
-
-  const germ = findClosestGermline(seq, chainType);
-  const liabilities = detectLiabilities(seq);
-  const lbl = 'alignment-label';
-
-  // -- Germline Identification (first) --
-  html += '<div class="section-title">Germline Identification</div>';
-  if (germ) {
-    const pct = (germ.identity * 100).toFixed(1);
-    const speciesLabel = germ.species.charAt(0).toUpperCase() + germ.species.slice(1);
-    html += '<div class="germline-info">Closest V Gene: <strong>' + germ.gene +
-      '</strong> | Species: <strong>' + speciesLabel +
-      '</strong> | Identity: <strong>' + pct + '%</strong> (' +
-      germ.matches + '/' + germ.total + ' positions)</div>';
-  } else {
-    html += '<div class="no-data">No germline sequences loaded. Add IMGT sequences to V_GENE_DB in the source code.</div>';
+function buildGermlineAlignmentContext(germ) {
+  const a1 = germ.aligned1, a2 = germ.aligned2;
+  const alen = a1.length;
+  const rawToAligned = [];
+  for (let i = 0, ri = 0; i < alen; i++) {
+    if (a1[i] !== '-') rawToAligned[ri++] = i;
   }
-
-  // -- Sequence Liabilities (merged with alignment when germline available) --
-  html += '<div class="section-title">Sequence Liabilities</div>';
-  html += '<div class="track-block">';
-
-  if (germ) {
-    const a1 = germ.aligned1, a2 = germ.aligned2;
-    const alen = a1.length;
-
-    const rawToAligned = [];
-    for (let i = 0, ri = 0; i < alen; i++) {
-      if (a1[i] !== '-') rawToAligned[ri++] = i;
-    }
-
-    const germRawToAligned = [];
-    for (let i = 0, ri = 0; i < alen; i++) {
-      if (a2[i] !== '-') germRawToAligned[ri++] = i;
-    }
-
-    html += renderRulerRow(alen, lbl);
-
-    if (germ.cdr1 || germ.cdr2) {
-      const labelChars = new Array(alen).fill(' ');
-      const pipeChars = new Array(alen).fill(' ');
-      const cdrRanges = [];
-      if (germ.cdr1) cdrRanges.push({label: 'CDR1', range: germ.cdr1});
-      if (germ.cdr2) cdrRanges.push({label: 'CDR2', range: germ.cdr2});
-
-      for (const {label, range} of cdrRanges) {
-        const [start, end] = range;
-        if (germRawToAligned[start] === undefined || germRawToAligned[end - 1] === undefined) continue;
-        for (let p = start; p < end; p++) {
-          const ap = germRawToAligned[p];
-          if (ap !== undefined) pipeChars[ap] = '|';
-        }
-        const aStart = germRawToAligned[start];
-        const labelStart = aStart;
-        for (let c = 0; c < label.length; c++) {
-          const pos = labelStart + c;
-          if (pos >= 0 && pos < alen) labelChars[pos] = label[c];
-        }
+  const germRawToAligned = [];
+  for (let i = 0, ri = 0; i < alen; i++) {
+    if (a2[i] !== '-') germRawToAligned[ri++] = i;
+  }
+  const labelChars = new Array(alen).fill(' ');
+  const pipeChars = new Array(alen).fill(' ');
+  if (germ.cdr1 || germ.cdr2) {
+    const cdrRanges = [];
+    if (germ.cdr1) cdrRanges.push({label: 'CDR1', range: germ.cdr1});
+    if (germ.cdr2) cdrRanges.push({label: 'CDR2', range: germ.cdr2});
+    for (const {label, range} of cdrRanges) {
+      const [start, end] = range;
+      if (germRawToAligned[start] === undefined || germRawToAligned[end - 1] === undefined) continue;
+      for (let p = start; p < end; p++) {
+        const ap = germRawToAligned[p];
+        if (ap !== undefined) pipeChars[ap] = '|';
       }
-
-      let cdrLabelRow = '<div class="track-row"><span class="track-label ' + lbl + '"></span>';
-      let cdrPipeRow = '<div class="track-row"><span class="track-label ' + lbl + '"></span>';
-      for (let i = 0; i < alen; i++) {
-        cdrLabelRow += '<span class="cdr-label-char">' + labelChars[i] + '</span>';
-        cdrPipeRow += '<span class="cdr-pipe-char">' + pipeChars[i] + '</span>';
+      const labelStart = germRawToAligned[start];
+      for (let c = 0; c < label.length; c++) {
+        const pos = labelStart + c;
+        if (pos >= 0 && pos < alen) labelChars[pos] = label[c];
       }
-      html += cdrLabelRow + '</div>';
-      html += cdrPipeRow + '</div>';
     }
+  }
+  return { a1, a2, alen, rawToAligned, labelChars, pipeChars };
+}
 
-    let gRow = '<div class="track-row"><span class="track-label ' + lbl + '">' + germ.gene + ':</span>';
-    for (let i = 0; i < alen; i++) {
+function renderGermlineInfoLineHtml(germ) {
+  const pct = (germ.identity * 100).toFixed(1);
+  const speciesLabel = germ.species.charAt(0).toUpperCase() + germ.species.slice(1);
+  return '<div class="germline-info">Closest V Gene: <strong>' + germ.gene +
+    '</strong> | Species: <strong>' + speciesLabel +
+    '</strong> | Identity: <strong>' + pct + '%</strong> (' +
+    germ.matches + '/' + germ.total + ' positions)</div>';
+}
+
+/** colSpec: { type: 'aligned', alen } | { type: 'msa', consensusMsa, rawToAligned } */
+function renderGermlineCdrRowsHtml(lbl, labelChars, pipeChars, colSpec) {
+  let cdrLabelRow = '<div class="track-row"><span class="track-label ' + lbl + '"></span>';
+  let cdrPipeRow = '<div class="track-row"><span class="track-label ' + lbl + '"></span>';
+  if (colSpec.type === 'aligned') {
+    for (let i = 0; i < colSpec.alen; i++) {
+      cdrLabelRow += '<span class="cdr-label-char">' + labelChars[i] + '</span>';
+      cdrPipeRow += '<span class="cdr-pipe-char">' + pipeChars[i] + '</span>';
+    }
+  } else {
+    const consensusMsa = colSpec.consensusMsa;
+    const rawToAligned = colSpec.rawToAligned;
+    const Lm = consensusMsa.length;
+    let k = 0;
+    for (let j = 0; j < Lm; j++) {
+      if (consensusMsa[j] === '-') {
+        cdrLabelRow += '<span class="cdr-label-char"> </span>';
+        cdrPipeRow += '<span class="cdr-pipe-char"> </span>';
+      } else {
+        const ap = rawToAligned[k++];
+        cdrLabelRow += '<span class="cdr-label-char">' + labelChars[ap] + '</span>';
+        cdrPipeRow += '<span class="cdr-pipe-char">' + pipeChars[ap] + '</span>';
+      }
+    }
+  }
+  return cdrLabelRow + '</div>' + cdrPipeRow + '</div>';
+}
+
+function renderGermlineGeneRowHtml(lbl, germ, a2, colSpec) {
+  let gRow = '<div class="track-row"><span class="track-label ' + lbl + '">' + germ.gene + ':</span>';
+  if (colSpec.type === 'aligned') {
+    for (let i = 0; i < colSpec.alen; i++) {
       gRow += a2[i] === '-' ? '<span class="seq-char">-</span>' : seqCharSpan(a2[i]);
     }
-    html += gRow + '</div>';
+  } else {
+    const consensusMsa = colSpec.consensusMsa;
+    const rawToAligned = colSpec.rawToAligned;
+    const Lm = consensusMsa.length;
+    let k = 0;
+    for (let j = 0; j < Lm; j++) {
+      if (consensusMsa[j] === '-') {
+        gRow += '<span class="seq-char" style="color:#ccc">-</span>';
+      } else {
+        const ap = rawToAligned[k++];
+        gRow += a2[ap] === '-' ? '<span class="seq-char">-</span>' : seqCharSpan(a2[ap]);
+      }
+    }
+  }
+  return gRow + '</div>';
+}
 
-    let dRow = '<div class="track-row"><span class="track-label ' + lbl + '"></span>';
+function renderGermlineMismatchRowHtml(lbl, a1, a2, colSpec) {
+  let dRow = '<div class="track-row"><span class="track-label ' + lbl + '"></span>';
+  if (colSpec.type === 'aligned') {
+    const alen = colSpec.alen;
     for (let i = 0; i < alen; i++) {
       if (a1[i] !== '-' && a2[i] !== '-' && a1[i] !== a2[i]) {
         dRow += '<span class="mismatch-char">X</span>';
@@ -2138,19 +2391,90 @@ function renderChainPanel(seq, chainType) {
         dRow += '<span> </span>';
       }
     }
-    html += dRow + '</div>';
+  } else {
+    const consensusMsa = colSpec.consensusMsa;
+    const rawToAligned = colSpec.rawToAligned;
+    const Lm = consensusMsa.length;
+    let k = 0;
+    for (let j = 0; j < Lm; j++) {
+      if (consensusMsa[j] === '-') {
+        dRow += '<span> </span>';
+      } else {
+        const ap = rawToAligned[k++];
+        if (a1[ap] !== '-' && a2[ap] !== '-' && a1[ap] !== a2[ap]) {
+          dRow += '<span class="mismatch-char">X</span>';
+        } else {
+          dRow += '<span> </span>';
+        }
+      }
+    }
+  }
+  return dRow + '</div>';
+}
+
+/**
+ * Cluster MSA only: germline summary + CDR markers + germline row + mismatch row, expanded to
+ * MSA column width (aligned with consensus). No liabilities, no second ruler.
+ */
+function renderGermlineMsaOverlayHtml(consensusMsa, chainType, lbl) {
+  const seq = consensusSequenceForAnalysis(consensusMsa);
+  if (!seq) return '';
+  const germ = findClosestGermline(seq, chainType);
+  if (!germ) return '';
+
+  const ctx = buildGermlineAlignmentContext(germ);
+  let html = renderGermlineInfoLineHtml(germ);
+  const colSpecMsa = { type: 'msa', consensusMsa, rawToAligned: ctx.rawToAligned };
+  if (germ.cdr1 || germ.cdr2) {
+    html += renderGermlineCdrRowsHtml(lbl, ctx.labelChars, ctx.pipeChars, colSpecMsa);
+  }
+  html += renderGermlineGeneRowHtml(lbl, germ, ctx.a2, colSpecMsa);
+  html += renderGermlineMismatchRowHtml(lbl, ctx.a1, ctx.a2, colSpecMsa);
+  return html;
+}
+
+/**
+ * Single-sequence tab: germline identification + aligned CDR / mismatch / liability tracks.
+ * `seq` must be a gap-free amino acid string.
+ */
+function renderGermlineAndLiabilitiesTrack(seq, chainType, lbl) {
+  const germ = findClosestGermline(seq, chainType);
+  const liabilities = detectLiabilities(seq);
+  let html = '';
+
+  html += '<div class="section-title">Germline Identification</div>';
+  if (germ) {
+    html += renderGermlineInfoLineHtml(germ);
+  } else {
+    html += '<div class="no-data">No germline sequences loaded. Add IMGT sequences to V_GENE_DB in the source code.</div>';
+  }
+
+  html += '<div class="section-title">Sequence Liabilities</div>';
+  html += '<div class="track-block">';
+
+  if (germ) {
+    const ctx = buildGermlineAlignmentContext(germ);
+    const colSpecAligned = { type: 'aligned', alen: ctx.alen };
+
+    html += renderRulerRow(ctx.alen, lbl);
+
+    if (germ.cdr1 || germ.cdr2) {
+      html += renderGermlineCdrRowsHtml(lbl, ctx.labelChars, ctx.pipeChars, colSpecAligned);
+    }
+    html += renderGermlineGeneRowHtml(lbl, germ, ctx.a2, colSpecAligned);
+    html += renderGermlineMismatchRowHtml(lbl, ctx.a1, ctx.a2, colSpecAligned);
 
     let sRow = '<div class="track-row"><span class="track-label ' + lbl + '">Sequence:</span>';
-    for (let i = 0; i < alen; i++) {
-      sRow += a1[i] === '-' ? '<span class="seq-char">-</span>' : seqCharSpan(a1[i]);
+    for (let i = 0; i < ctx.alen; i++) {
+      sRow += ctx.a1[i] === '-' ? '<span class="seq-char">-</span>' : seqCharSpan(ctx.a1[i]);
     }
     html += sRow + '</div>';
 
     let anyLiability = false;
     for (const name of LIABILITY_ORDER) {
       if (liabilities[name]) {
-        const mapped = liabilities[name].map(function(p) { return rawToAligned[p]; });
-        html += renderTrackRow(a1, name, mapped, lbl);
+        const mapped = liabilities[name].map(function(p) { return ctx.rawToAligned[p]; });
+        html += renderTrackRow(ctx.a1, name, mapped, lbl);
         anyLiability = true;
       }
     }
@@ -2174,8 +2498,13 @@ function renderChainPanel(seq, chainType) {
   }
 
   html += '</div>';
-  html += '</div>';
   return html;
+}
+
+function renderChainPanel(seq, chainType) {
+  return '<div class="chain-panel"><h2>' + chainType + ' Chain Analysis</h2>' +
+    renderGermlineAndLiabilitiesTrack(seq, chainType, 'alignment-label') +
+    '</div>';
 }
 
 // ================================================================
@@ -2214,6 +2543,525 @@ function analyze() {
 }
 
 // ================================================================
+// BASKET / CART
+// ================================================================
+
+let basket = [];
+let basketNextId = 1;
+
+function addToBasket(name, vh, vl) {
+  basket.push({ id: basketNextId++, name: name, vh: vh, vl: vl });
+  renderBasket();
+}
+
+function removeFromBasket(id) {
+  basket = basket.filter(function(e) { return e.id !== id; });
+  renderBasket();
+}
+
+function clearBasket() {
+  basket = [];
+  const csvInput = document.getElementById('csv-upload');
+  if (csvInput) csvInput.value = '';
+  renderBasket();
+}
+
+function renderBasket() {
+  const tbody = document.getElementById('basket-tbody');
+  const countEl = document.getElementById('basket-count-num');
+  const clearBtn = document.getElementById('clear-basket-btn');
+  const clusterBtn = document.getElementById('cluster-btn');
+
+  countEl.textContent = basket.length;
+  clearBtn.disabled = basket.length === 0;
+  clusterBtn.disabled = basket.length === 0;
+
+  if (basket.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:#888;font-style:italic">No sequences added yet.</td></tr>';
+    return;
+  }
+
+  let html = '';
+  for (let i = 0; i < basket.length; i++) {
+    const e = basket[i];
+    const vhPrev = e.vh ? e.vh.substring(0, 30) + (e.vh.length > 30 ? '...' : '') : '<em style="color:#aaa">none</em>';
+    const vlPrev = e.vl ? e.vl.substring(0, 30) + (e.vl.length > 30 ? '...' : '') : '<em style="color:#aaa">none</em>';
+    html += '<tr>' +
+      '<td>' + (i + 1) + '</td>' +
+      '<td>' + escapeHtml(e.name) + '</td>' +
+      '<td>' + vhPrev + '</td>' +
+      '<td>' + vlPrev + '</td>' +
+      '<td><button class="btn btn-danger btn-sm" onclick="removeFromBasket(' + e.id + ')">x</button></td>' +
+      '</tr>';
+  }
+  tbody.innerHTML = html;
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ================================================================
+// CSV PARSING
+// ================================================================
+
+function parseCSV(text) {
+  const rows = [];
+  let i = 0;
+  while (i < text.length) {
+    const row = [];
+    while (i < text.length) {
+      if (text[i] === '"') {
+        i++;
+        let field = '';
+        while (i < text.length) {
+          if (text[i] === '"') {
+            if (i + 1 < text.length && text[i + 1] === '"') {
+              field += '"';
+              i += 2;
+            } else {
+              i++;
+              break;
+            }
+          } else {
+            field += text[i];
+            i++;
+          }
+        }
+        row.push(field);
+      } else {
+        let field = '';
+        while (i < text.length && text[i] !== ',' && text[i] !== '\n' && text[i] !== '\r') {
+          field += text[i];
+          i++;
+        }
+        row.push(field);
+      }
+      if (i < text.length && text[i] === ',') {
+        i++;
+      } else {
+        break;
+      }
+    }
+    if (i < text.length && text[i] === '\r') i++;
+    if (i < text.length && text[i] === '\n') i++;
+    if (row.length > 1 || (row.length === 1 && row[0].trim() !== '')) {
+      rows.push(row);
+    }
+  }
+  return rows;
+}
+
+function loadCSVToBasket(text) {
+  const rows = parseCSV(text);
+  if (rows.length < 2) return 0;
+
+  const headers = rows[0].map(function(h) { return h.trim().toLowerCase(); });
+  let vhCol = -1, vlCol = -1, nameCol = -1;
+  for (let c = 0; c < headers.length; c++) {
+    if (vhCol === -1 && headers[c].includes('vh')) vhCol = c;
+    if (vlCol === -1 && headers[c].includes('vl')) vlCol = c;
+    if (nameCol === -1 && headers[c].includes('name')) nameCol = c;
+  }
+
+  if (vhCol === -1 && vlCol === -1) return -1;
+
+  let count = 0;
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    const vh = vhCol >= 0 && row[vhCol] ? cleanSequence(row[vhCol]) : '';
+    const vl = vlCol >= 0 && row[vlCol] ? cleanSequence(row[vlCol]) : '';
+    if (!vh && !vl) continue;
+    const name = (nameCol >= 0 && row[nameCol]) ? row[nameCol].trim() : 'Seq ' + basketNextId;
+    addToBasket(name, vh, vl);
+    count++;
+  }
+  return count;
+}
+
+// ================================================================
+// PAIRWISE IDENTITY (GLOBAL NW FOR CLUSTERING)
+// ================================================================
+
+function globalAlign(seq1, seq2) {
+  const m = seq1.length, n = seq2.length;
+  const MATCH = 1, MISMATCH = -1, GAP = -5;
+
+  const dp = new Array(m + 1);
+  for (let i = 0; i <= m; i++) {
+    dp[i] = new Int32Array(n + 1);
+    dp[i][0] = i * GAP;
+  }
+  for (let j = 0; j <= n; j++) dp[0][j] = j * GAP;
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const s = seq1[i - 1] === seq2[j - 1] ? MATCH : MISMATCH;
+      dp[i][j] = Math.max(
+        dp[i - 1][j - 1] + s,
+        dp[i - 1][j] + GAP,
+        dp[i][j - 1] + GAP
+      );
+    }
+  }
+
+  const c1 = [], c2 = [];
+  let i = m, j = n;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0) {
+      const s = seq1[i - 1] === seq2[j - 1] ? MATCH : MISMATCH;
+      if (dp[i][j] === dp[i - 1][j - 1] + s) {
+        c1.push(seq1[i - 1]); c2.push(seq2[j - 1]);
+        i--; j--; continue;
+      }
+    }
+    if (i > 0 && dp[i][j] === dp[i - 1][j] + GAP) {
+      c1.push(seq1[i - 1]); c2.push('-');
+      i--;
+    } else {
+      c1.push('-'); c2.push(seq2[j - 1]);
+      j--;
+    }
+  }
+  c1.reverse(); c2.reverse();
+
+  let matches = 0, total = 0;
+  for (let k = 0; k < c1.length; k++) {
+    if (c1[k] !== '-' || c2[k] !== '-') {
+      total++;
+      if (c1[k] === c2[k]) matches++;
+    }
+  }
+
+  return {
+    aligned1: c1.join(''), aligned2: c2.join(''),
+    identity: total > 0 ? matches / total : 0, matches: matches, total: total
+  };
+}
+
+function pairwiseIdentity(entry1, entry2) {
+  const s1 = (entry1.vh || '') + (entry1.vl || '');
+  const s2 = (entry2.vh || '') + (entry2.vl || '');
+  if (!s1 || !s2) return 0;
+  return globalAlign(s1, s2).identity;
+}
+
+// ================================================================
+// GREEDY CLUSTERING (CD-HIT-STYLE)
+// ================================================================
+
+function clusterSequences(entries, threshold) {
+  const frac = threshold / 100;
+  const sorted = entries.slice().sort(function(a, b) {
+    return ((b.vh || '').length + (b.vl || '').length) -
+           ((a.vh || '').length + (a.vl || '').length);
+  });
+
+  const clusters = [];
+  for (let i = 0; i < sorted.length; i++) {
+    let assigned = false;
+    for (let c = 0; c < clusters.length; c++) {
+      const ident = pairwiseIdentity(sorted[i], clusters[c].rep);
+      if (ident >= frac) {
+        clusters[c].members.push(sorted[i]);
+        assigned = true;
+        break;
+      }
+    }
+    if (!assigned) {
+      clusters.push({ rep: sorted[i], members: [sorted[i]] });
+    }
+  }
+
+  clusters.sort(function(a, b) { return b.members.length - a.members.length; });
+  return clusters;
+}
+
+// ================================================================
+// MULTIPLE SEQUENCE ALIGNMENT (STAR ALIGNMENT)
+// ================================================================
+
+function starMSA(sequences) {
+  if (sequences.length === 0) return [];
+  if (sequences.length === 1) return [sequences[0]];
+
+  // Find center: highest average pairwise identity
+  let bestCenter = 0, bestAvg = -1;
+  const identMatrix = [];
+  for (let i = 0; i < sequences.length; i++) {
+    identMatrix[i] = [];
+    for (let j = 0; j < sequences.length; j++) {
+      if (i === j) { identMatrix[i][j] = 1; continue; }
+      if (j < i) { identMatrix[i][j] = identMatrix[j][i]; continue; }
+      identMatrix[i][j] = globalAlign(sequences[i], sequences[j]).identity;
+    }
+  }
+  for (let i = 0; i < sequences.length; i++) {
+    let sum = 0;
+    for (let j = 0; j < sequences.length; j++) sum += identMatrix[i][j];
+    const avg = sum / sequences.length;
+    if (avg > bestAvg) { bestAvg = avg; bestCenter = i; }
+  }
+
+  const center = sequences[bestCenter];
+
+  // Pairwise-align each sequence to the center
+  const pairAlignments = [];
+  for (let i = 0; i < sequences.length; i++) {
+    if (i === bestCenter) {
+      pairAlignments.push({ a1: center, a2: center });
+    } else {
+      const r = globalAlign(center, sequences[i]);
+      pairAlignments.push({ a1: r.aligned1, a2: r.aligned2 });
+    }
+  }
+
+  // Build master gap profile from the center's perspective.
+  // For each position in the original center, track the max gaps inserted before it.
+  const centerLen = center.length;
+  const gapsBefore = new Array(centerLen + 1).fill(0);
+
+  for (let i = 0; i < pairAlignments.length; i++) {
+    const a1 = pairAlignments[i].a1;
+    let centerPos = 0, gapCount = 0;
+    for (let k = 0; k < a1.length; k++) {
+      if (a1[k] === '-') {
+        gapCount++;
+      } else {
+        if (gapCount > gapsBefore[centerPos]) gapsBefore[centerPos] = gapCount;
+        gapCount = 0;
+        centerPos++;
+      }
+    }
+    if (gapCount > gapsBefore[centerPos]) gapsBefore[centerPos] = gapCount;
+  }
+
+  // Re-expand each pairwise alignment into the master coordinate system
+  const msaSeqs = [];
+  for (let i = 0; i < pairAlignments.length; i++) {
+    const a1 = pairAlignments[i].a1;
+    const a2 = pairAlignments[i].a2;
+    const expanded = [];
+    let centerPos = 0, k = 0;
+
+    for (let cp = 0; cp <= centerLen; cp++) {
+      const masterGaps = gapsBefore[cp];
+      let localGaps = 0;
+      while (k < a1.length && a1[k] === '-') {
+        expanded.push(a2[k]);
+        localGaps++;
+        k++;
+      }
+      for (let g = localGaps; g < masterGaps; g++) {
+        expanded.push('-');
+      }
+      if (cp < centerLen && k < a1.length) {
+        expanded.push(a2[k]);
+        k++;
+        centerPos++;
+      }
+    }
+    while (k < a2.length) {
+      expanded.push(a2[k]);
+      k++;
+    }
+
+    msaSeqs.push(expanded.join(''));
+  }
+
+  // Pad all to same length
+  let maxLen = 0;
+  for (let i = 0; i < msaSeqs.length; i++) {
+    if (msaSeqs[i].length > maxLen) maxLen = msaSeqs[i].length;
+  }
+  for (let i = 0; i < msaSeqs.length; i++) {
+    while (msaSeqs[i].length < maxLen) msaSeqs[i] += '-';
+  }
+
+  return msaSeqs;
+}
+
+// ================================================================
+// CONSERVATION & CONSENSUS
+// ================================================================
+
+function computeConservation(msaSeqs) {
+  if (msaSeqs.length === 0) return { identity: [], consensus: '' };
+  const len = msaSeqs[0].length;
+  const identity = [];
+  let consensus = '';
+
+  for (let col = 0; col < len; col++) {
+    const counts = {};
+    let nonGap = 0;
+    for (let r = 0; r < msaSeqs.length; r++) {
+      const ch = msaSeqs[r][col];
+      if (ch !== '-') {
+        counts[ch] = (counts[ch] || 0) + 1;
+        nonGap++;
+      }
+    }
+    if (nonGap === 0) {
+      identity.push(0);
+      consensus += '-';
+    } else {
+      let maxChar = '-', maxCount = 0;
+      for (const ch in counts) {
+        if (counts[ch] > maxCount) { maxCount = counts[ch]; maxChar = ch; }
+      }
+      identity.push(maxCount / nonGap);
+      consensus += (maxCount / nonGap >= 0.5) ? maxChar : maxChar.toLowerCase();
+    }
+  }
+
+  return { identity: identity, consensus: consensus };
+}
+
+/** Strip gaps and uppercase for germline search / liabilities from MSA consensus. */
+function consensusSequenceForAnalysis(consensus) {
+  let s = '';
+  for (let i = 0; i < consensus.length; i++) {
+    const ch = consensus[i];
+    if (ch === '-') continue;
+    s += ch.toUpperCase();
+  }
+  return s;
+}
+
+// ================================================================
+// MULTIPLE SEQUENCE RENDERING
+// ================================================================
+
+function renderConservationBars(identity, labelClass) {
+  const maxH = 32;
+  let html = '<div class="conservation-row"><span class="track-label ' + labelClass + '">Identity:</span>';
+  for (let i = 0; i < identity.length; i++) {
+    const pct = identity[i];
+    const h = Math.round(pct * maxH);
+    let color;
+    if (pct >= 0.8) color = '#22aa44';
+    else if (pct >= 0.5) color = '#ccaa00';
+    else color = '#cc4444';
+    html += '<span class="cons-bar" style="height:' + h + 'px;background:' + color + '"></span>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderConsensusRow(consensus, labelClass) {
+  let html = '<div class="track-row"><span class="track-label ' + labelClass + '">Consensus:</span>';
+  for (let i = 0; i < consensus.length; i++) {
+    const ch = consensus[i];
+    if (ch === '-') {
+      html += '<span class="seq-char" style="color:#ccc">-</span>';
+    } else if (ch === ch.toLowerCase()) {
+      html += '<span class="seq-char" style="color:#aaa">' + ch + '</span>';
+    } else {
+      html += seqCharSpan(ch);
+    }
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderMSARow(msaSeq, label, labelClass) {
+  let html = '<div class="track-row"><span class="track-label ' + labelClass + '">' + escapeHtml(label) + ':</span>';
+  for (let i = 0; i < msaSeq.length; i++) {
+    const ch = msaSeq[i];
+    if (ch === '-') {
+      html += '<span class="seq-char" style="color:#ccc">-</span>';
+    } else {
+      html += seqCharSpan(ch);
+    }
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderChainMSA(members, chainKey, chainLabel) {
+  const seqs = [];
+  const names = [];
+  for (let i = 0; i < members.length; i++) {
+    const s = members[i][chainKey];
+    if (s) { seqs.push(s); names.push(members[i].name); }
+  }
+  if (seqs.length === 0) return '';
+
+  const lbl = 'msa-label';
+  let html = '<div class="msa-section-title">' + chainLabel + ' Alignment</div>';
+  html += '<div class="track-block">';
+
+  const chainType = chainLabel === 'VH' ? 'VH' : 'VL';
+
+  if (seqs.length === 1) {
+    const one = seqs[0];
+    html += renderRulerRow(one.length, lbl);
+    html += renderGermlineMsaOverlayHtml(one, chainType, lbl);
+    html += renderMSARow(one, names[0], lbl);
+  } else {
+    const msaSeqs = starMSA(seqs);
+    const cons = computeConservation(msaSeqs);
+
+    html += renderRulerRow(msaSeqs[0].length, lbl);
+    html += renderGermlineMsaOverlayHtml(cons.consensus, chainType, lbl);
+    html += renderConsensusRow(cons.consensus, lbl);
+    html += renderConservationBars(cons.identity, lbl);
+    for (let i = 0; i < msaSeqs.length; i++) {
+      html += renderMSARow(msaSeqs[i], names[i], lbl);
+    }
+  }
+
+  html += '</div>';
+
+  return html;
+}
+
+function renderClusterResults(clusters) {
+  if (clusters.length === 0) return '<div class="no-data">No sequences to cluster.</div>';
+
+  let html = '';
+  for (let c = 0; c < clusters.length; c++) {
+    const cl = clusters[c];
+    html += '<div class="cluster-panel">';
+    html += '<h2>Cluster ' + (c + 1) + ' (' + cl.members.length + ' sequence' + (cl.members.length > 1 ? 's' : '') + ')</h2>';
+
+    html += renderChainMSA(cl.members, 'vh', 'VH');
+    html += renderChainMSA(cl.members, 'vl', 'VL');
+
+    html += '</div>';
+  }
+  return html;
+}
+
+function runMultiAnalysis() {
+  if (basket.length === 0) return;
+
+  const threshold = parseInt(document.getElementById('cluster-threshold').value, 10) || 70;
+  const clusters = clusterSequences(basket, threshold);
+
+  const resultsEl = document.getElementById('multi-results');
+  resultsEl.innerHTML = renderClusterResults(clusters);
+
+  if (document.getElementById('aa-color-toggle').checked) {
+    resultsEl.classList.add('aa-coloring');
+  } else {
+    resultsEl.classList.remove('aa-coloring');
+  }
+}
+
+// ================================================================
+// TAB SWITCHING
+// ================================================================
+
+function switchTab(tabName) {
+  document.querySelectorAll('.tab-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.tab === tabName);
+  });
+  document.getElementById('tab-single').style.display = tabName === 'single' ? '' : 'none';
+  document.getElementById('tab-multi').style.display = tabName === 'multi' ? '' : 'none';
+}
+
+// ================================================================
 // EVENT LISTENERS
 // ================================================================
 
@@ -2236,10 +3084,57 @@ document.getElementById('aa-color-toggle').addEventListener('change', function (
   const el = document.getElementById('results');
   if (this.checked) el.classList.add('aa-coloring');
   else el.classList.remove('aa-coloring');
+
+  const multiEl = document.getElementById('multi-results');
+  if (this.checked) multiEl.classList.add('aa-coloring');
+  else multiEl.classList.remove('aa-coloring');
 });
 
+document.querySelectorAll('.tab-btn').forEach(function(btn) {
+  btn.addEventListener('click', function() { switchTab(this.dataset.tab); });
+});
+
+document.getElementById('add-to-basket-btn').addEventListener('click', function() {
+  const vhRaw = document.getElementById('vh-input').value.trim();
+  const vlRaw = document.getElementById('vl-input').value.trim();
+  const vh = cleanSequence(vhRaw);
+  const vl = cleanSequence(vlRaw);
+  if (!vh && !vl) return;
+  addToBasket('Seq ' + basketNextId, vh, vl);
+  const status = document.getElementById('basket-status');
+  status.textContent = 'Added to basket (' + basket.length + ' total)';
+  status.style.display = '';
+  status.style.opacity = '1';
+  setTimeout(function() { status.style.opacity = '0'; }, 2000);
+  setTimeout(function() { status.style.display = 'none'; status.style.opacity = '1'; }, 2500);
+});
+
+document.getElementById('csv-upload').addEventListener('change', function(e) {
+  const input = e.target;
+  const file = input.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('csv-status');
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const count = loadCSVToBasket(ev.target.result);
+    if (count === -1) {
+      statusEl.textContent = 'No VH or VL column found in CSV headers.';
+      statusEl.style.color = '#cc4444';
+    } else {
+      statusEl.textContent = 'Loaded ' + count + ' sequence(s) from ' + file.name;
+      statusEl.style.color = '#22aa44';
+    }
+    // Reset so choosing the same file again fires "change" (browser quirk).
+    input.value = '';
+  };
+  reader.readAsText(file);
+});
+
+document.getElementById('clear-basket-btn').addEventListener('click', clearBasket);
+document.getElementById('cluster-btn').addEventListener('click', runMultiAnalysis);
+
 // Allow Ctrl+Enter to trigger analysis from textareas
-document.querySelectorAll('#vh-input, #vl-input').forEach(ta => {
+document.querySelectorAll('#vh-input, #vl-input').forEach(function(ta) {
   ta.addEventListener('focus', function () {
     if (this.dataset.demoPlaceholder === '1') {
       this.value = '';
@@ -2255,6 +3150,7 @@ document.querySelectorAll('#vh-input, #vl-input').forEach(ta => {
 });
 
 seedDemoTextareas();
+renderBasket();
 </script>
 </body>
 </html>

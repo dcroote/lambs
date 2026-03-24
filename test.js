@@ -17,13 +17,19 @@ if (!scriptMatch) {
   process.exit(1);
 }
 
-// Cut at the MAIN ANALYSIS section — everything before it is pure logic
+// Cut at the TAB SWITCHING section — everything before it is pure logic
+// (DOM-touching basket functions get a mock document so they don't crash)
 const CUTOFF =
-  "// ================================================================\n// MAIN ANALYSIS";
+  "// ================================================================\n// TAB SWITCHING";
 const pureJS = scriptMatch[1].split(CUTOFF)[0];
 
 const wrappedJS = `
 (function(exports) {
+  // Minimal DOM mock for basket functions that call renderBasket()
+  var document = { getElementById: function() {
+    return { textContent: '', innerHTML: '', disabled: false, style: {} };
+  }};
+
   ${pureJS}
   exports.cleanSequence = cleanSequence;
   exports.buildRuler = buildRuler;
@@ -32,6 +38,14 @@ const wrappedJS = `
   exports.findClosestGermline = findClosestGermline;
   exports.AA_PROPERTY = AA_PROPERTY;
   exports.V_GENE_DB = V_GENE_DB;
+  exports.parseCSV = parseCSV;
+  exports.escapeHtml = escapeHtml;
+  exports.globalAlign = globalAlign;
+  exports.pairwiseIdentity = pairwiseIdentity;
+  exports.clusterSequences = clusterSequences;
+  exports.starMSA = starMSA;
+  exports.computeConservation = computeConservation;
+  exports.consensusSequenceForAnalysis = consensusSequenceForAnalysis;
 })(this);
 `;
 const ctx = {};
@@ -45,6 +59,14 @@ const {
   findClosestGermline,
   AA_PROPERTY,
   V_GENE_DB,
+  parseCSV,
+  escapeHtml,
+  globalAlign,
+  pairwiseIdentity,
+  clusterSequences,
+  starMSA,
+  computeConservation,
+  consensusSequenceForAnalysis,
 } = ctx;
 
 // --- Test harness ---
@@ -304,6 +326,338 @@ assert(AA_PROPERTY["D"] === "negative", "D is negative");
 assert(AA_PROPERTY["C"] === "special", "C is special");
 assert(AA_PROPERTY["G"] === "special", "G is special");
 assert(AA_PROPERTY["P"] === "special", "P is special");
+
+// ============================================================
+// escapeHtml
+// ============================================================
+section("escapeHtml");
+
+assert(escapeHtml("a&b") === "a&amp;b", "escapes ampersand");
+assert(escapeHtml("<b>") === "&lt;b&gt;", "escapes angle brackets");
+assert(escapeHtml('"hi"') === "&quot;hi&quot;", "escapes quotes");
+assert(escapeHtml("plain") === "plain", "no-op for plain text");
+
+// ============================================================
+// parseCSV
+// ============================================================
+section("parseCSV");
+
+const csv1 = parseCSV("a,b,c\n1,2,3\n4,5,6\n");
+assert(csv1.length === 3, "parseCSV: 3 rows (header + 2 data)");
+assert(csv1[0][0] === "a" && csv1[0][2] === "c", "parseCSV: header parsed");
+assert(csv1[1][1] === "2", "parseCSV: data cell correct");
+
+const csv2 = parseCSV('name,vh\n"Seq, 1","ABC"\n');
+assert(csv2[1][0] === "Seq, 1", "parseCSV: quoted field with comma");
+assert(csv2[1][1] === "ABC", "parseCSV: quoted field value");
+
+const csv3 = parseCSV('a,b\r\n1,2\r\n3,4\r\n');
+assert(csv3.length === 3, "parseCSV: handles CRLF line endings");
+assert(csv3[2][0] === "3", "parseCSV: CRLF data correct");
+
+const csv4 = parseCSV('a\n"he said ""hi"""\n');
+assert(csv4[1][0] === 'he said "hi"', "parseCSV: escaped double quotes");
+
+const csvEmpty = parseCSV("");
+assert(csvEmpty.length === 0, "parseCSV: empty string returns no rows");
+
+// ============================================================
+// globalAlign (full Needleman-Wunsch)
+// ============================================================
+section("globalAlign");
+
+const ga1 = globalAlign("ABCDEF", "ABCDEF");
+assert(ga1.identity === 1.0, "globalAlign: identical = 100%");
+assert(ga1.matches === 6 && ga1.total === 6, "globalAlign: identical counts");
+
+const ga2 = globalAlign("ABCDEF", "ABXDEF");
+assert(ga2.matches === 5, "globalAlign: single mismatch = 5 matches");
+assert(
+  ga2.aligned1.replace(/-/g, "") === "ABCDEF",
+  "globalAlign: mismatch query preserved",
+);
+assert(
+  ga2.aligned2.replace(/-/g, "") === "ABXDEF",
+  "globalAlign: mismatch ref preserved",
+);
+
+const ga3 = globalAlign("ABCDEF", "ABCXYZDEF");
+assert(
+  ga3.aligned1.replace(/-/g, "") === "ABCDEF",
+  "globalAlign: insertion query preserved",
+);
+assert(
+  ga3.aligned2.replace(/-/g, "") === "ABCXYZDEF",
+  "globalAlign: insertion ref preserved",
+);
+
+const ga4 = globalAlign("", "");
+assert(ga4.identity === 0, "globalAlign: empty sequences = 0");
+
+const ga5 = globalAlign("ABC", "");
+assert(ga5.aligned1.replace(/-/g, "") === "ABC", "globalAlign: one empty seq1");
+assert(ga5.aligned2 === "---", "globalAlign: one empty seq2 gaps");
+
+const ga6 = globalAlign("ABCDEFGHIJ", "ABCDEF");
+assert(ga6.matches === 6, "globalAlign: prefix match 6 matches");
+assert(ga6.total === 10, "globalAlign: prefix match 10 total positions");
+
+// ============================================================
+// pairwiseIdentity
+// ============================================================
+section("pairwiseIdentity");
+
+const pi1 = pairwiseIdentity(
+  { vh: "ABCDEF", vl: "GHIJ" },
+  { vh: "ABCDEF", vl: "GHIJ" },
+);
+assert(pi1 === 1.0, "pairwiseIdentity: identical pairs = 1.0");
+
+const pi2 = pairwiseIdentity(
+  { vh: "ABCDEF", vl: "GHIJ" },
+  { vh: "XYZXYZ", vl: "WXWX" },
+);
+assert(pi2 < 0.5, "pairwiseIdentity: dissimilar pairs < 0.5");
+
+const pi3 = pairwiseIdentity({ vh: "", vl: "" }, { vh: "ABC", vl: "DEF" });
+assert(pi3 === 0, "pairwiseIdentity: empty entry = 0");
+
+const pi4 = pairwiseIdentity(
+  { vh: "ABCDEF", vl: "" },
+  { vh: "ABCDEF", vl: "" },
+);
+assert(pi4 === 1.0, "pairwiseIdentity: VH-only identical = 1.0");
+
+// ============================================================
+// clusterSequences
+// ============================================================
+section("clusterSequences");
+
+const clEntries = [
+  { id: 1, name: "A", vh: "ABCDEF", vl: "GHIJ" },
+  { id: 2, name: "B", vh: "ABCDEF", vl: "GHIJ" },
+  { id: 3, name: "C", vh: "XYZXYZ", vl: "WXWX" },
+];
+
+const cl100 = clusterSequences(clEntries, 100);
+assert(cl100.length >= 2, "cluster@100%: dissimilar seqs form separate clusters");
+
+const cl10 = clusterSequences(clEntries, 10);
+assert(
+  cl10.length >= 1,
+  "cluster@10%: very low threshold groups more sequences",
+);
+
+const clIdentical = clusterSequences(
+  [
+    { id: 1, name: "A", vh: "ABCDEF", vl: "GHIJ" },
+    { id: 2, name: "B", vh: "ABCDEF", vl: "GHIJ" },
+    { id: 3, name: "C", vh: "ABCDEF", vl: "GHIJ" },
+  ],
+  70,
+);
+assert(clIdentical.length === 1, "cluster: 3 identical seqs = 1 cluster");
+assert(
+  clIdentical[0].members.length === 3,
+  "cluster: single cluster has all 3 members",
+);
+
+const clEmpty = clusterSequences([], 70);
+assert(clEmpty.length === 0, "cluster: empty input = empty output");
+
+const clSingle = clusterSequences(
+  [{ id: 1, name: "A", vh: "ABCDEF", vl: "GHIJ" }],
+  70,
+);
+assert(clSingle.length === 1, "cluster: single entry = 1 cluster");
+assert(clSingle[0].members.length === 1, "cluster: single entry cluster size 1");
+
+// Verify sorted by size (largest first)
+const clSorted = clusterSequences(
+  [
+    { id: 1, name: "A", vh: "ABCDEF", vl: "GHIJ" },
+    { id: 2, name: "B", vh: "ABCDEF", vl: "GHIJ" },
+    { id: 3, name: "C", vh: "XYZXYZ", vl: "WXWX" },
+  ],
+  70,
+);
+assert(
+  clSorted[0].members.length >= clSorted[clSorted.length - 1].members.length,
+  "cluster: results sorted largest first",
+);
+
+// ============================================================
+// starMSA
+// ============================================================
+section("starMSA");
+
+const msa0 = starMSA([]);
+assert(msa0.length === 0, "starMSA: empty input");
+
+const msa1 = starMSA(["ABCDEF"]);
+assert(msa1.length === 1, "starMSA: single sequence");
+assert(msa1[0] === "ABCDEF", "starMSA: single sequence unchanged");
+
+const msa2 = starMSA(["ABCDEF", "ABCDEF"]);
+assert(msa2.length === 2, "starMSA: two identical sequences");
+assert(msa2[0] === msa2[1], "starMSA: identical sequences aligned identically");
+
+const msa3 = starMSA(["ABCDEF", "ABCDEF", "ABCDEF"]);
+assert(msa3.length === 3, "starMSA: three identical");
+assert(
+  msa3[0] === msa3[1] && msa3[1] === msa3[2],
+  "starMSA: three identical all equal",
+);
+
+// All MSA outputs must have equal length
+const msa4 = starMSA(["ABCDEF", "ABXDEF", "ABCEF"]);
+assert(msa4.length === 3, "starMSA: three similar sequences");
+const msaLen = msa4[0].length;
+assert(
+  msa4[1].length === msaLen && msa4[2].length === msaLen,
+  "starMSA: all outputs same length",
+);
+
+// Original residues are preserved (no residue loss)
+for (let i = 0; i < msa4.length; i++) {
+  const original = ["ABCDEF", "ABXDEF", "ABCEF"][i];
+  const stripped = msa4[i].replace(/-/g, "");
+  assert(
+    stripped === original,
+    "starMSA: residues preserved for seq " + (i + 1),
+  );
+}
+
+// Realistic antibody-like sequences
+const msaAb = starMSA([
+  "EVQLVESGGGLVQPGGSLRLSCAAS",
+  "EVQLVESGGGLVQPGGSLRLSCAAS",
+  "EVQLVETGGGLVQPGGSLRLSCAAS",
+]);
+assert(msaAb.length === 3, "starMSA: antibody-like sequences");
+assert(
+  msaAb[0].length === msaAb[1].length && msaAb[1].length === msaAb[2].length,
+  "starMSA: antibody-like equal length",
+);
+
+// ============================================================
+// computeConservation
+// ============================================================
+section("computeConservation");
+
+const cons0 = computeConservation([]);
+assert(cons0.identity.length === 0, "conservation: empty input");
+assert(cons0.consensus === "", "conservation: empty consensus");
+
+const cons1 = computeConservation(["QQQ", "QET", "QQS"]);
+assert(cons1.identity.length === 3, "conservation: 3 columns");
+assert(cons1.identity[0] === 1.0, "conservation: col 1 = 100% (all Q)");
+assert(
+  Math.abs(cons1.identity[1] - 2 / 3) < 0.01,
+  "conservation: col 2 = 66% (2 Q, 1 E)",
+);
+assert(
+  Math.abs(cons1.identity[2] - 1 / 3) < 0.01,
+  "conservation: col 3 = 33% (Q, T, S all different)",
+);
+assert(cons1.consensus[0] === "Q", "conservation: consensus pos 1 = Q");
+assert(cons1.consensus[1] === "Q", "conservation: consensus pos 2 = Q (majority)");
+
+// Consensus lowercase when no residue exceeds 50%
+const cons2 = computeConservation(["AB", "CD", "EF", "GH"]);
+assert(
+  cons2.consensus[0] === cons2.consensus[0].toLowerCase(),
+  "conservation: low-identity position = lowercase",
+);
+
+// Gaps are excluded from counting
+const cons3 = computeConservation(["A-C", "A-C", "ABC"]);
+assert(cons3.identity[0] === 1.0, "conservation: col 1 all A = 100%");
+assert(
+  cons3.identity[1] === 1.0,
+  "conservation: col 2 gaps excluded, only B counted = 100%",
+);
+assert(cons3.identity[2] === 1.0, "conservation: col 3 all C = 100%");
+
+// All gaps column
+const cons4 = computeConservation(["A-", "A-"]);
+assert(cons4.identity[1] === 0, "conservation: all-gap column = 0");
+assert(cons4.consensus[1] === "-", "conservation: all-gap consensus = dash");
+
+// Perfect conservation
+const cons5 = computeConservation(["AAAA", "AAAA", "AAAA"]);
+assert(
+  cons5.identity.every(function (v) {
+    return v === 1.0;
+  }),
+  "conservation: all identical = all 1.0",
+);
+assert(cons5.consensus === "AAAA", "conservation: all identical consensus");
+
+// ============================================================
+// consensusSequenceForAnalysis
+// ============================================================
+section("consensusSequenceForAnalysis");
+
+assert(
+  consensusSequenceForAnalysis("A-bC") === "ABC",
+  "consensusForAnalysis: strips gaps and uppercases",
+);
+assert(consensusSequenceForAnalysis("") === "", "consensusForAnalysis: empty");
+assert(
+  consensusSequenceForAnalysis("abc") === "ABC",
+  "consensusForAnalysis: lowercases to uppercase",
+);
+
+// ============================================================
+// Integration: cluster + MSA + conservation pipeline
+// ============================================================
+section("integration: cluster-MSA-conservation pipeline");
+
+const pipelineEntries = [
+  {
+    id: 1,
+    name: "mAb1",
+    vh: "EVQLVESGGGLVQPGGSLRLSCAASGFTFSDYWMHWVRQAPGKGLEWVSRINSDGSSTSYADSVKGRFTISRDNAKNTLYLQMNSLRAEDTAVYYCTTDGWGFDYWGQGTLVTVSS",
+    vl: "DIQMTQSPSSLSASVGDRVTITCRASQSISSYLNWYQQKPGKAPKLLIYAASSLQSGVPSRFSGSGSGTDFTLTISSLQPEDFATYYCQQSYSTPLTFGGGTKVEIK",
+  },
+  {
+    id: 2,
+    name: "mAb2",
+    vh: "EVQLVESGGGLVQPGGSLRLSCAASGFTFSDYWMHWVRQAPGKGLEWVSRINSDGSSTSYADSVKGRFTISRDNAKNTLYLQMNSLRAEDTAVYYCTTDGWGFDYWGQGTLVTVSS",
+    vl: "DIQMTQSPSSLSASVGDRVTITCRASQSISSYLNWYQQKPGKAPKLLIYAASSLQSGVPSRFSGSGSGTDFTLTISSLQPEDFATYYCQQSYSTPLTFGGGTKVEIK",
+  },
+];
+
+const pipeClusters = clusterSequences(pipelineEntries, 70);
+assert(pipeClusters.length === 1, "pipeline: identical pair = 1 cluster");
+assert(
+  pipeClusters[0].members.length === 2,
+  "pipeline: cluster has 2 members",
+);
+
+const pipeMSA = starMSA(
+  pipeClusters[0].members.map(function (m) {
+    return m.vh;
+  }),
+);
+assert(pipeMSA.length === 2, "pipeline: MSA produces 2 aligned seqs");
+assert(
+  pipeMSA[0].length === pipeMSA[1].length,
+  "pipeline: MSA seqs equal length",
+);
+
+const pipeCons = computeConservation(pipeMSA);
+assert(
+  pipeCons.identity.every(function (v) {
+    return v === 1.0;
+  }),
+  "pipeline: identical seqs = 100% conservation everywhere",
+);
+assert(
+  pipeCons.consensus === pipeMSA[0],
+  "pipeline: consensus matches aligned seq",
+);
 
 // ============================================================
 // Summary
