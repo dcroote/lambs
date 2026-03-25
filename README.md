@@ -1,8 +1,6 @@
 # LAMBS - Local Analysis of mAb Sequences
 
-<img src="lambs.jpg" alt="Photo of three lambs" width="800" height="544">
-
-## About
+## About 🐑
 
 Completely free, private, and self-contained analysis of monoclonal antibody (mAb) sequences. Analyze gene segments, germline mutations, CDRs, developability liabilities, and more.
 
@@ -58,7 +56,3 @@ This was run in a separate directory containing IgBLAST v1.22.0 and IMGT sequenc
 ### Background: Initial prompt and plan
 
 For those curious, see `.cursor/initial.prompt.md` and `.cursor/initial.plan.md` for the original prompt and plan, respectively.
-
-## Other
-
-Photo credit: [theotherkev](https://pixabay.com/photos/sheep-lamb-animals-livestock-farm-7943526/).
