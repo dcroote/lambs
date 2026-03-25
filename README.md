@@ -10,10 +10,6 @@ The best part? It's a single html file that runs offline in a web browser, which
 
 Code is open source, permissively licensed under Apache 2.0, and available at [https://github.com/dcroote/lambs](https://github.com/dcroote/lambs).
 
-## Screenshot
-
-<img src="screenshot.png" alt="Screenshot of the analysis dashboard" width="800" height="260">
-
 ## Usage
 
 1. Download `index.html` from the [latest release](https://github.com/dcroote/lambs/releases/latest)
@@ -21,6 +17,10 @@ Code is open source, permissively licensed under Apache 2.0, and available at [h
 3. Enter your VH and VL amino acid sequences and click "Analyze"
 4. View the results
 5. Make better antibodies for humankind!
+
+## Screenshot
+
+<img src="screenshot.png" alt="Screenshot of the analysis dashboard" width="800" height="835">
 
 ## Developer notes
 
