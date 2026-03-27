@@ -2,11 +2,18 @@
 
 ## About 🐑
 
-Completely free, private, and self-contained analysis of monoclonal antibody (mAb) sequences. Analyze gene segments, germline mutations, CDRs, developability liabilities, and more.
+Completely free, private, and self-contained analysis of monoclonal antibody (mAb) sequences.
 
 The best part? It's a single html file that runs offline in a web browser, which means no installation, no programming, and your sequences stay private!
 
 Code is open source, permissively licensed under Apache 2.0, and available at [https://github.com/dcroote/lambs](https://github.com/dcroote/lambs).
+
+## Features
+
+- **Developability liability identification**: for deamidation, isomerization, glycosylation, unpaired cysteines, and more.
+- **Germline gene identification and alignment**: for human and mouse with annotation of somatic hypermutation and CDRs.
+- **Batch analysis**: sequence clustering with multiple sequence alignment, AA conservation plots, and consensus sequences per cluster. Get started with a simple CSV upload.
+- **Privacy**: everything runs locally in the browser. No data is sent anywhere. No tracking.
 
 ## Usage
 
