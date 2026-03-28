@@ -1,0 +1,11 @@
+.DS_Store
+
+.vscode/
+.idea/
+
+# Python utilities e.g. populate_germlines.py
+__pycache__/
+*.py[codz]
+*$py.class
+.venv/
+venv/
