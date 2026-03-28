@@ -10,10 +10,11 @@ Code is open source, permissively licensed under Apache 2.0, and available at [h
 
 ## Features
 
-- **Developability liability identification**: for deamidation, isomerization, glycosylation, unpaired cysteines, and more.
-- **Germline gene identification and alignment**: for human and mouse with annotation of somatic hypermutation and CDRs.
-- **Batch analysis**: sequence clustering with multiple sequence alignment, AA conservation plots, and consensus sequences per cluster. Get started with a simple CSV upload.
-- **Privacy**: everything runs locally in the browser. No data is sent anywhere. No tracking.
+- **Developability liability identification**: deamidation, isomerization, glycosylation, unpaired cysteines, and more.
+- **Germline gene identification and alignment**: human and mouse with annotation of somatic hypermutation and CDRs.
+- **Batch analysis**: sequence clustering with multiple sequence alignment, AA conservation plots, and consensus sequences per cluster. Accepts CSV upload.
+- **Verified analysis logic**: core algorithms are covered by extensive unit tests; run locally with `node test.js`.
+- **Privacy**: everything runs locally in the browser. No tracking and no data is sent anywhere.
 
 ## Usage
 
