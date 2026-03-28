@@ -2613,10 +2613,11 @@ function renderGermlineMsaOverlayHtml(consensusMsa, chainType, lbl) {
   const germ = findClosestGermline(seq, chainType);
   if (!germ) return '';
 
-  const ctx = buildGermlineAlignmentContext(germ, null);
+  const cdr3 = detectCDR3(seq, chainType);
+  const ctx = buildGermlineAlignmentContext(germ, cdr3);
   let html = renderGermlineInfoLineHtml(germ);
   const colSpecMsa = { type: 'msa', consensusMsa, rawToAligned: ctx.rawToAligned };
-  if (germ.cdr1 || germ.cdr2) {
+  if (germ.cdr1 || germ.cdr2 || cdr3) {
     html += renderGermlineCdrRowsHtml(lbl, ctx.labelChars, ctx.pipeChars, colSpecMsa);
   }
   html += renderGermlineGeneRowHtml(lbl, germ, ctx.a2, colSpecMsa);
