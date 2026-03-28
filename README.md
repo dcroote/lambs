@@ -26,7 +26,7 @@ Code is open source, permissively licensed under Apache 2.0, and available at [h
 
 ## Screenshot
 
-<img src="screenshot.png" alt="Screenshot of the analysis dashboard" width="800" height="835">
+<img src="screenshot.png" alt="Screenshot of the analysis dashboard" width="1200" height="1130">
 
 ## Developer notes
 
