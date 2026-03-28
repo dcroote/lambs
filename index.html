@@ -469,6 +469,7 @@ h1 {
         <div class="legend-row">Isomer &mdash; Isomerization (DG, DS)</div>
         <div class="legend-row">Cleavage &mdash; Acid-labile cleavage (DP)</div>
         <div class="legend-row">N-term Q &mdash; N-terminal Q (pyroglutamate formation risk)</div>
+        <div class="legend-row">Agg Patch &mdash; Aggregation-prone hydrophobic patch (Kyte-Doolittle mean &ge; 1.6, window = 7)</div>
       </div>
       <div class="legend-section">
         <strong>Amino Acid Property Colors</strong>
@@ -1998,8 +1999,16 @@ const AA_PROPERTY = {};
 'DE'.split('').forEach(a => AA_PROPERTY[a] = 'negative');
 'CGP'.split('').forEach(a => AA_PROPERTY[a] = 'special');
 
+const KD_HYDROPHOBICITY = {
+  I: 4.5, V: 4.2, L: 3.8, F: 2.8, C: 2.5, M: 1.9, A: 1.8,
+  G: -0.4, T: -0.7, S: -0.8, W: -0.9, Y: -1.3, P: -1.6, H: -3.2,
+  D: -3.5, E: -3.5, N: -3.5, Q: -3.5,  K: -3.9, R: -4.5
+};
+const AGG_WINDOW = 7;
+const AGG_THRESHOLD = 1.6;
+
 const LIABILITY_ORDER = [
-  'Unp. Cys', 'Met Ox', 'Glycosyl', 'Deamid', 'Isomer', 'Cleavage', 'N-term Q', 'Trp Ox'
+  'Unp. Cys', 'Met Ox', 'Glycosyl', 'Deamid', 'Isomer', 'Cleavage', 'N-term Q', 'Agg Patch', 'Trp Ox'
 ];
 
 // ================================================================
@@ -2095,6 +2104,23 @@ function detectLiabilities(seq) {
   //   if (seq[i] === 'W') trpPos.push(i);
   // }
   // if (trpPos.length) results['Trp Ox'] = trpPos;
+
+  // Aggregation-prone hydrophobic patches (Kyte-Doolittle sliding window)
+  const aggSet = new Set();
+  if (seq.length >= AGG_WINDOW) {
+    let winSum = 0;
+    for (let i = 0; i < AGG_WINDOW; i++) winSum += (KD_HYDROPHOBICITY[seq[i]] || 0);
+    if (winSum / AGG_WINDOW >= AGG_THRESHOLD) {
+      for (let i = 0; i < AGG_WINDOW; i++) aggSet.add(i);
+    }
+    for (let i = AGG_WINDOW; i < seq.length; i++) {
+      winSum += (KD_HYDROPHOBICITY[seq[i]] || 0) - (KD_HYDROPHOBICITY[seq[i - AGG_WINDOW]] || 0);
+      if (winSum / AGG_WINDOW >= AGG_THRESHOLD) {
+        for (let j = i - AGG_WINDOW + 1; j <= i; j++) aggSet.add(j);
+      }
+    }
+  }
+  if (aggSet.size) results['Agg Patch'] = [...aggSet].sort((a, b) => a - b);
 
   return results;
 }
