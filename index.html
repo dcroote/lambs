@@ -160,12 +160,18 @@ h1 {
 .cdr-label-char { color: #8800aa; font-weight: bold; }
 .cdr-pipe-char { color: #8800aa; }
 
-#results.aa-coloring .seq-char.aa-hydrophobic { color: #2255cc; }
-#results.aa-coloring .seq-char.aa-polar { color: #22aa44; }
-#results.aa-coloring .seq-char.aa-positive { color: #cc2222; }
-#results.aa-coloring .seq-char.aa-negative { color: #8822aa; }
-#results.aa-coloring .seq-char.aa-aromatic { color: #996600; }
-#results.aa-coloring .seq-char.aa-special { color: #dd6600; }
+#results.aa-coloring .seq-char.aa-hydrophobic,
+#multi-results.aa-coloring .seq-char.aa-hydrophobic { color: #2255cc; }
+#results.aa-coloring .seq-char.aa-polar,
+#multi-results.aa-coloring .seq-char.aa-polar { color: #22aa44; }
+#results.aa-coloring .seq-char.aa-positive,
+#multi-results.aa-coloring .seq-char.aa-positive { color: #cc2222; }
+#results.aa-coloring .seq-char.aa-negative,
+#multi-results.aa-coloring .seq-char.aa-negative { color: #8822aa; }
+#results.aa-coloring .seq-char.aa-aromatic,
+#multi-results.aa-coloring .seq-char.aa-aromatic { color: #996600; }
+#results.aa-coloring .seq-char.aa-special,
+#multi-results.aa-coloring .seq-char.aa-special { color: #dd6600; }
 
 .germline-info {
   font-size: 0.9em;
@@ -342,6 +348,73 @@ h1 {
 .btn-secondary:hover { background: #666; }
 .btn-sm { padding: 2px 10px; font-size: 12px; }
 .btn:disabled { opacity: 0.5; cursor: default; }
+
+.multi-liability-options {
+  margin: 0 0 16px 0;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
+.multi-liability-options fieldset {
+  border: none;
+  padding: 0;
+  margin: 0 0 14px 0;
+}
+
+.multi-liability-options fieldset:last-of-type {
+  margin-bottom: 0;
+}
+
+.multi-liability-options legend {
+  font-weight: bold;
+  color: #333;
+  padding: 0;
+  margin-bottom: 6px;
+}
+
+.msa-liab-cb-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  align-items: center;
+}
+
+.msa-liab-cb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.msa-liab-swatch {
+  display: inline-block;
+  width: 1.1em;
+  height: 1.1em;
+  border-radius: 2px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  flex-shrink: 0;
+}
+
+.msa-aa-color-row {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+.msa-aa-color-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.msa-aa-color-row label.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 
 .cluster-controls {
   display: flex;
@@ -532,6 +605,8 @@ h1 {
       <input type="number" id="cluster-threshold" value="70" min="1" max="100" step="1">
       <button id="cluster-btn" class="btn btn-primary" disabled>Cluster &amp; Analyze</button>
     </div>
+
+    <div id="msa-liability-options" class="multi-liability-options" aria-label="MSA liability options"></div>
 
     <div id="multi-results"></div>
 
@@ -2011,6 +2086,24 @@ const LIABILITY_ORDER = [
   'Unp. Cys', 'Met Ox', 'Glycosyl', 'Deamid', 'Isomer', 'Cleavage', 'N-term Q', 'Agg Patch', 'Trp Ox'
 ];
 
+/** Subset of LIABILITY_ORDER that `detectLiabilities` can return (excludes disabled detectors such as Trp Ox). */
+const LIABILITY_ORDER_ACTIVE = LIABILITY_ORDER.filter(function (name) {
+  return name !== 'Trp Ox';
+});
+
+/** Per-liability highlight color for MSA overlays (rgba for overlap). */
+const LIABILITY_HIGHLIGHT_COLORS = {
+  'Unp. Cys': 'rgba(200, 40, 40, 0.38)',
+  'Met Ox': 'rgba(30, 120, 200, 0.38)',
+  'Glycosyl': 'rgba(160, 60, 180, 0.38)',
+  'Deamid': 'rgba(220, 140, 30, 0.38)',
+  'Isomer': 'rgba(40, 160, 120, 0.38)',
+  'Cleavage': 'rgba(200, 80, 160, 0.38)',
+  'N-term Q': 'rgba(100, 100, 200, 0.38)',
+  'Agg Patch': 'rgba(120, 90, 40, 0.38)',
+  'Trp Ox': 'rgba(60, 60, 60, 0.38)'
+};
+
 // ================================================================
 // UTILITY FUNCTIONS
 // ================================================================
@@ -2297,9 +2390,10 @@ function findClosestGermline(seq, chainType) {
 // RENDERING HELPERS
 // ================================================================
 
-function seqCharSpan(char) {
+function seqCharSpan(char, extraClass) {
   const prop = AA_PROPERTY[char];
-  const cls = 'seq-char' + (prop ? ' aa-' + prop : '');
+  let cls = 'seq-char' + (prop ? ' aa-' + prop : '');
+  if (extraClass) cls += ' ' + extraClass;
   return '<span class="' + cls + '">' + char + '</span>';
 }
 
@@ -3026,6 +3120,124 @@ function consensusSequenceForAnalysis(consensus) {
   return s;
 }
 
+/**
+ * Map each residue index in a gap-free sequence to the MSA column index for that row
+ * (same length as msaSeq).
+ */
+function msaRawToMasterAligned(msaSeq) {
+  const map = [];
+  let ri = 0;
+  for (let j = 0; j < msaSeq.length; j++) {
+    if (msaSeq[j] !== '-') map[ri++] = j;
+  }
+  return map;
+}
+
+function buildMsaLiabilityColorMap(msaSeq, highlightNames) {
+  const colorMap = {};
+  if (!highlightNames || highlightNames.length === 0) return colorMap;
+  const raw = consensusSequenceForAnalysis(msaSeq);
+  if (!raw) return colorMap;
+  const rawToMsa = msaRawToMasterAligned(msaSeq);
+  const liabilities = detectLiabilities(raw);
+  for (let h = 0; h < highlightNames.length; h++) {
+    const name = highlightNames[h];
+    const positions = liabilities[name];
+    if (!positions || !positions.length) continue;
+    const color = LIABILITY_HIGHLIGHT_COLORS[name] || 'rgba(200, 40, 40, 0.35)';
+    for (let p = 0; p < positions.length; p++) {
+      const msaCol = rawToMsa[positions[p]];
+      if (msaCol !== undefined && !colorMap[msaCol]) colorMap[msaCol] = color;
+    }
+  }
+  return colorMap;
+}
+
+function entryHasFilteredLiability(entry, filterNames) {
+  if (!filterNames || filterNames.length === 0) return false;
+  for (let f = 0; f < filterNames.length; f++) {
+    const name = filterNames[f];
+    if (entry.vh && detectLiabilities(entry.vh)[name]) return true;
+    if (entry.vl && detectLiabilities(entry.vl)[name]) return true;
+  }
+  return false;
+}
+
+function filterBasketByLiabilityFilters(entries, filterNames) {
+  if (!filterNames || filterNames.length === 0) return entries;
+  return entries.filter(function (e) { return !entryHasFilteredLiability(e, filterNames); });
+}
+
+function readMsaLiabilityCheckboxState(kind) {
+  const names = [];
+  const prefix = kind === 'hl' ? 'msa-liab-hl-' : 'msa-liab-fl-';
+  for (let i = 0; i < LIABILITY_ORDER_ACTIVE.length; i++) {
+    const el = document.getElementById(prefix + i);
+    if (el && el.checked) names.push(LIABILITY_ORDER_ACTIVE[i]);
+  }
+  return names;
+}
+
+function renderMsaLiabilityOptionsHtml() {
+  let hlField = '<fieldset><legend>Liability highlighting (MSA)</legend><div class="msa-liab-cb-grid">';
+  let flField = '<fieldset><legend>Exclude sequences with liability</legend><div class="msa-liab-cb-grid">';
+  for (let i = 0; i < LIABILITY_ORDER_ACTIVE.length; i++) {
+    const nm = LIABILITY_ORDER_ACTIVE[i];
+    const color = LIABILITY_HIGHLIGHT_COLORS[nm] || '#888';
+    const hlId = 'msa-liab-hl-' + i;
+    const flId = 'msa-liab-fl-' + i;
+    hlField +=
+      '<label class="msa-liab-cb-item"><span class="msa-liab-swatch" style="background:' + color + '" title="' +
+      escapeHtml(nm) + '"></span><input type="checkbox" id="' + hlId + '"><span>' + escapeHtml(nm) + '</span></label>';
+    flField +=
+      '<label class="msa-liab-cb-item"><input type="checkbox" id="' + flId + '"><span>' + escapeHtml(nm) + '</span></label>';
+  }
+  hlField += '</div></fieldset>';
+  flField += '</div></fieldset>';
+  const aaToggle = '<div class="msa-aa-color-row">' +
+    '<label class="toggle-label" id="msa-aa-color-label" for="msa-aa-color-toggle">' +
+    '<input type="checkbox" id="msa-aa-color-toggle" checked>' +
+    ' Color by amino acid property</label></div>';
+  return hlField + flField + aaToggle;
+}
+
+function updateMsaAaToggleState() {
+  const toggle = document.getElementById('msa-aa-color-toggle');
+  const label = document.getElementById('msa-aa-color-label');
+  if (!toggle) return;
+  const anyHl = readMsaLiabilityCheckboxState('hl').length > 0;
+  toggle.disabled = anyHl;
+  if (label) label.classList.toggle('disabled', anyHl);
+}
+
+function refreshMsaLiabilityOptionsUI() {
+  const host = document.getElementById('msa-liability-options');
+  if (!host) return;
+  const isFirstRender = host.innerHTML === '';
+  const prevHl = readMsaLiabilityCheckboxState('hl');
+  const prevFl = readMsaLiabilityCheckboxState('fl');
+  const prevAa = (function() {
+    const el = document.getElementById('msa-aa-color-toggle');
+    return el ? el.checked : true;
+  }());
+  host.innerHTML = renderMsaLiabilityOptionsHtml();
+  for (let i = 0; i < LIABILITY_ORDER_ACTIVE.length; i++) {
+    const nm = LIABILITY_ORDER_ACTIVE[i];
+    const hlEl = document.getElementById('msa-liab-hl-' + i);
+    const flEl = document.getElementById('msa-liab-fl-' + i);
+    if (hlEl) hlEl.checked = isFirstRender ? true : prevHl.indexOf(nm) >= 0;
+    if (flEl) flEl.checked = prevFl.indexOf(nm) >= 0;
+    if (hlEl) hlEl.addEventListener('change', function () { rerenderMsaDisplay(); });
+    if (flEl) flEl.addEventListener('change', function () { runMultiAnalysis(); });
+  }
+  const aaToggleEl = document.getElementById('msa-aa-color-toggle');
+  if (aaToggleEl) {
+    aaToggleEl.checked = prevAa;
+    aaToggleEl.addEventListener('change', function () { rerenderMsaDisplay(); });
+  }
+  updateMsaAaToggleState();
+}
+
 // ================================================================
 // MULTIPLE SEQUENCE RENDERING
 // ================================================================
@@ -3062,21 +3274,27 @@ function renderConsensusRow(consensus, labelClass) {
   return html;
 }
 
-function renderMSARow(msaSeq, label, labelClass) {
+function renderMSARow(msaSeq, label, labelClass, highlightNames) {
+  const colorMap = buildMsaLiabilityColorMap(msaSeq, highlightNames);
   let html = '<div class="track-row"><span class="track-label ' + labelClass + '">' + escapeHtml(label) + ':</span>';
   for (let i = 0; i < msaSeq.length; i++) {
     const ch = msaSeq[i];
     if (ch === '-') {
       html += '<span class="seq-char" style="color:#ccc">-</span>';
     } else {
-      html += seqCharSpan(ch);
+      const bg = colorMap[i];
+      if (bg) {
+        html += '<span class="seq-char" style="background-color:' + bg + ';color:#000">' + ch + '</span>';
+      } else {
+        html += seqCharSpan(ch);
+      }
     }
   }
   html += '</div>';
   return html;
 }
 
-function renderChainMSA(members, chainKey, chainLabel) {
+function renderChainMSA(members, chainKey, chainLabel, highlightNames) {
   const seqs = [];
   const names = [];
   for (let i = 0; i < members.length; i++) {
@@ -3095,7 +3313,7 @@ function renderChainMSA(members, chainKey, chainLabel) {
     const one = seqs[0];
     html += renderRulerRow(one.length, lbl);
     html += renderGermlineMsaOverlayHtml(one, chainType, lbl);
-    html += renderMSARow(one, names[0], lbl);
+    html += renderMSARow(one, names[0], lbl, highlightNames);
   } else {
     const msaSeqs = starMSA(seqs);
     const cons = computeConservation(msaSeqs);
@@ -3105,7 +3323,7 @@ function renderChainMSA(members, chainKey, chainLabel) {
     html += renderConsensusRow(cons.consensus, lbl);
     html += renderConservationBars(cons.identity, lbl);
     for (let i = 0; i < msaSeqs.length; i++) {
-      html += renderMSARow(msaSeqs[i], names[i], lbl);
+      html += renderMSARow(msaSeqs[i], names[i], lbl, highlightNames);
     }
   }
 
@@ -3114,7 +3332,7 @@ function renderChainMSA(members, chainKey, chainLabel) {
   return html;
 }
 
-function renderClusterResults(clusters) {
+function renderClusterResults(clusters, highlightNames) {
   if (clusters.length === 0) return '<div class="no-data">No sequences to cluster.</div>';
 
   let html = '';
@@ -3123,28 +3341,50 @@ function renderClusterResults(clusters) {
     html += '<div class="cluster-panel">';
     html += '<h2>Cluster ' + (c + 1) + ' (' + cl.members.length + ' sequence' + (cl.members.length > 1 ? 's' : '') + ')</h2>';
 
-    html += renderChainMSA(cl.members, 'vh', 'VH');
-    html += renderChainMSA(cl.members, 'vl', 'VL');
+    html += renderChainMSA(cl.members, 'vh', 'VH', highlightNames);
+    html += renderChainMSA(cl.members, 'vl', 'VL', highlightNames);
 
     html += '</div>';
   }
   return html;
 }
 
+let lastClusters = null;
+
+function applyMsaAaColoring(resultsEl) {
+  const anyHl = readMsaLiabilityCheckboxState('hl').length > 0;
+  const aaToggle = document.getElementById('msa-aa-color-toggle');
+  const aaOn = !anyHl && aaToggle && aaToggle.checked;
+  if (aaOn) resultsEl.classList.add('aa-coloring');
+  else resultsEl.classList.remove('aa-coloring');
+}
+
+function rerenderMsaDisplay() {
+  const resultsEl = document.getElementById('multi-results');
+  if (!resultsEl) return;
+  updateMsaAaToggleState();
+  if (!lastClusters) return;
+  const highlightNames = readMsaLiabilityCheckboxState('hl');
+  resultsEl.innerHTML = renderClusterResults(lastClusters, highlightNames);
+  applyMsaAaColoring(resultsEl);
+}
+
 function runMultiAnalysis() {
-  if (basket.length === 0) return;
+  const resultsEl = document.getElementById('multi-results');
+  if (basket.length === 0) {
+    lastClusters = null;
+    if (resultsEl) resultsEl.innerHTML = '';
+    return;
+  }
 
   const threshold = parseInt(document.getElementById('cluster-threshold').value, 10) || 70;
-  const clusters = clusterSequences(basket, threshold);
+  const filterNames = readMsaLiabilityCheckboxState('fl');
+  const highlightNames = readMsaLiabilityCheckboxState('hl');
+  const entriesForCluster = filterBasketByLiabilityFilters(basket, filterNames);
+  lastClusters = clusterSequences(entriesForCluster, threshold);
 
-  const resultsEl = document.getElementById('multi-results');
-  resultsEl.innerHTML = renderClusterResults(clusters);
-
-  if (document.getElementById('aa-color-toggle').checked) {
-    resultsEl.classList.add('aa-coloring');
-  } else {
-    resultsEl.classList.remove('aa-coloring');
-  }
+  resultsEl.innerHTML = renderClusterResults(lastClusters, highlightNames);
+  applyMsaAaColoring(resultsEl);
 }
 
 // ================================================================
@@ -3182,10 +3422,6 @@ document.getElementById('aa-color-toggle').addEventListener('change', function (
   const el = document.getElementById('results');
   if (this.checked) el.classList.add('aa-coloring');
   else el.classList.remove('aa-coloring');
-
-  const multiEl = document.getElementById('multi-results');
-  if (this.checked) multiEl.classList.add('aa-coloring');
-  else multiEl.classList.remove('aa-coloring');
 });
 
 document.querySelectorAll('.tab-btn').forEach(function(btn) {
@@ -3230,6 +3466,8 @@ document.getElementById('csv-upload').addEventListener('change', function(e) {
 
 document.getElementById('clear-basket-btn').addEventListener('click', clearBasket);
 document.getElementById('cluster-btn').addEventListener('click', runMultiAnalysis);
+document.getElementById('cluster-threshold').addEventListener('change', runMultiAnalysis);
+
 
 // Allow Ctrl+Enter to trigger analysis from textareas
 document.querySelectorAll('#vh-input, #vl-input').forEach(function(ta) {
@@ -3249,6 +3487,7 @@ document.querySelectorAll('#vh-input, #vl-input').forEach(function(ta) {
 
 seedDemoTextareas();
 renderBasket();
+refreshMsaLiabilityOptionsUI();
 </script>
 </body>
 </html>

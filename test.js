@@ -46,6 +46,11 @@ const wrappedJS = `
   exports.starMSA = starMSA;
   exports.computeConservation = computeConservation;
   exports.consensusSequenceForAnalysis = consensusSequenceForAnalysis;
+  exports.LIABILITY_ORDER_ACTIVE = LIABILITY_ORDER_ACTIVE;
+  exports.msaRawToMasterAligned = msaRawToMasterAligned;
+  exports.filterBasketByLiabilityFilters = filterBasketByLiabilityFilters;
+  exports.entryHasFilteredLiability = entryHasFilteredLiability;
+  exports.buildMsaLiabilityColorMap = buildMsaLiabilityColorMap;
   exports.KD_HYDROPHOBICITY = KD_HYDROPHOBICITY;
   exports.AGG_WINDOW = AGG_WINDOW;
   exports.AGG_THRESHOLD = AGG_THRESHOLD;
@@ -71,6 +76,11 @@ const {
   starMSA,
   computeConservation,
   consensusSequenceForAnalysis,
+  LIABILITY_ORDER_ACTIVE,
+  msaRawToMasterAligned,
+  filterBasketByLiabilityFilters,
+  entryHasFilteredLiability,
+  buildMsaLiabilityColorMap,
   KD_HYDROPHOBICITY,
   AGG_WINDOW,
   AGG_THRESHOLD,
@@ -498,6 +508,58 @@ const clSorted = clusterSequences(
 assert(
   clSorted[0].members.length >= clSorted[clSorted.length - 1].members.length,
   "cluster: results sorted largest first",
+);
+
+// ============================================================
+// MSA liability helpers
+// ============================================================
+section("MSA liability helpers");
+
+assert(
+  LIABILITY_ORDER_ACTIVE.indexOf("Trp Ox") < 0,
+  "LIABILITY_ORDER_ACTIVE excludes Trp Ox",
+);
+
+const mapGapped = msaRawToMasterAligned("---MQ");
+assert(
+  mapGapped[0] === 3 && mapGapped[1] === 4,
+  "msaRawToMasterAligned maps gap-free indices to MSA columns",
+);
+
+const colorMap = buildMsaLiabilityColorMap("---MQ", ["Met Ox"]);
+assert(
+  typeof colorMap === "object" && colorMap !== null,
+  "buildMsaLiabilityColorMap returns an object",
+);
+assert(
+  Object.keys(colorMap).length > 0,
+  "buildMsaLiabilityColorMap finds Met Ox hit in ---MQ",
+);
+assert(
+  colorMap[3] && colorMap[3].indexOf("rgba(") >= 0,
+  "buildMsaLiabilityColorMap maps M at MSA col 3 to an rgba color",
+);
+assert(
+  Object.keys(buildMsaLiabilityColorMap("MQ", [])).length === 0,
+  "buildMsaLiabilityColorMap returns empty map when no highlights selected",
+);
+
+const qEntry = { id: 1, name: "Q", vh: "QAAAA", vl: "" };
+assert(
+  entryHasFilteredLiability(qEntry, ["N-term Q"]),
+  "entryHasFilteredLiability detects N-term Q on VH",
+);
+assert(
+  !entryHasFilteredLiability(qEntry, ["Met Ox"]),
+  "entryHasFilteredLiability false when filter type absent",
+);
+const kept = filterBasketByLiabilityFilters(
+  [qEntry, { id: 2, name: "M", vh: "AAAAA", vl: "" }],
+  ["N-term Q"],
+);
+assert(
+  kept.length === 1 && kept[0].id === 2,
+  "filterBasketByLiabilityFilters drops matching entries",
 );
 
 // ============================================================
