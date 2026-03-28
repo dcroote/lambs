@@ -2100,6 +2100,61 @@ function detectLiabilities(seq) {
 }
 
 // ================================================================
+// CDR3 DETECTION (DUAL-ANCHOR MOTIF SCAN)
+// ================================================================
+
+function detectCDR3(seq, chainType) {
+  const isHeavy = chainType === 'VH';
+  const n = seq.length;
+  if (n < 10) return null;
+
+  // Step 1: Find the conserved Cys at end of FR3 ([YFH]xC motif)
+  // Use >= so that on equal scores the leftmost C wins (the true FR3
+  // boundary is always upstream of any CDR3-internal Cys).
+  const lo = Math.max(2, Math.floor(n * 0.4));
+  const hi = Math.min(n - 4, Math.floor(n * 0.88));
+  let anchorCys = -1, bestScore = 0;
+  for (let i = hi; i >= lo; i--) {
+    if (seq[i] !== 'C') continue;
+    let score = 1;
+    if ('YFH'.includes(seq[i - 1])) score += 3;
+    if (i >= 2 && 'YFH'.includes(seq[i - 2])) score += 2;
+    if (score >= bestScore) { bestScore = score; anchorCys = i; }
+  }
+  if (anchorCys < 0 || bestScore < 3) return null;
+
+  // Step 2: Find FR4 anchor (WG_G / W_QG for heavy, FG_G for light)
+  const fr4Char = isHeavy ? 'W' : 'F';
+  const minDist = 3, maxDist = isHeavy ? 37 : 20;
+  const sLo = anchorCys + 1 + minDist;
+  const sHi = Math.min(n - 1, anchorCys + 1 + maxDist);
+
+  let fr4Pos = -1;
+  for (let i = sLo; i <= sHi && i + 3 < n; i++) {
+    if (seq[i] === fr4Char && seq[i + 1] === 'G' && seq[i + 3] === 'G') {
+      fr4Pos = i; break;
+    }
+  }
+  if (fr4Pos < 0) {
+    for (let i = sLo; i <= sHi && i + 3 < n; i++) {
+      if (seq[i] === fr4Char && seq[i + 2] === 'Q' && seq[i + 3] === 'G') {
+        fr4Pos = i; break;
+      }
+    }
+  }
+  if (fr4Pos < 0) {
+    for (let i = sLo; i <= sHi && i + 1 < n; i++) {
+      if (seq[i] === fr4Char && seq[i + 1] === 'G') {
+        fr4Pos = i; break;
+      }
+    }
+  }
+  if (fr4Pos < 0) return null;
+
+  return [anchorCys + 1, fr4Pos];
+}
+
+// ================================================================
 // SEMI-GLOBAL ALIGNMENT (V-GENE TO QUERY)
 // ================================================================
 // The germline V gene must be fully consumed, but the query (which
@@ -2286,7 +2341,7 @@ function renderAlignmentBlock(aligned1, aligned2, geneName) {
 // CHAIN PANEL RENDERING
 // ================================================================
 
-function buildGermlineAlignmentContext(germ) {
+function buildGermlineAlignmentContext(germ, cdr3) {
   const a1 = germ.aligned1, a2 = germ.aligned2;
   const alen = a1.length;
   const rawToAligned = [];
@@ -2313,6 +2368,22 @@ function buildGermlineAlignmentContext(germ) {
       const labelStart = germRawToAligned[start];
       for (let c = 0; c < label.length; c++) {
         const pos = labelStart + c;
+        if (pos >= 0 && pos < alen) labelChars[pos] = label[c];
+      }
+    }
+  }
+  if (cdr3) {
+    const [start, end] = cdr3;
+    const aStart = rawToAligned[start];
+    const aEnd = rawToAligned[end - 1];
+    if (aStart !== undefined && aEnd !== undefined) {
+      for (let p = start; p < end; p++) {
+        const ap = rawToAligned[p];
+        if (ap !== undefined) pipeChars[ap] = '|';
+      }
+      const label = 'CDR3';
+      for (let c = 0; c < label.length; c++) {
+        const pos = aStart + c;
         if (pos >= 0 && pos < alen) labelChars[pos] = label[c];
       }
     }
@@ -2422,7 +2493,7 @@ function renderGermlineMsaOverlayHtml(consensusMsa, chainType, lbl) {
   const germ = findClosestGermline(seq, chainType);
   if (!germ) return '';
 
-  const ctx = buildGermlineAlignmentContext(germ);
+  const ctx = buildGermlineAlignmentContext(germ, null);
   let html = renderGermlineInfoLineHtml(germ);
   const colSpecMsa = { type: 'msa', consensusMsa, rawToAligned: ctx.rawToAligned };
   if (germ.cdr1 || germ.cdr2) {
@@ -2440,6 +2511,7 @@ function renderGermlineMsaOverlayHtml(consensusMsa, chainType, lbl) {
 function renderGermlineAndLiabilitiesTrack(seq, chainType, lbl) {
   const germ = findClosestGermline(seq, chainType);
   const liabilities = detectLiabilities(seq);
+  const cdr3 = detectCDR3(seq, chainType);
   let html = '';
 
   html += '<div class="section-title">Germline Identification</div>';
@@ -2453,12 +2525,12 @@ function renderGermlineAndLiabilitiesTrack(seq, chainType, lbl) {
   html += '<div class="track-block">';
 
   if (germ) {
-    const ctx = buildGermlineAlignmentContext(germ);
+    const ctx = buildGermlineAlignmentContext(germ, cdr3);
     const colSpecAligned = { type: 'aligned', alen: ctx.alen };
 
     html += renderRulerRow(ctx.alen, lbl);
 
-    if (germ.cdr1 || germ.cdr2) {
+    if (germ.cdr1 || germ.cdr2 || cdr3) {
       html += renderGermlineCdrRowsHtml(lbl, ctx.labelChars, ctx.pipeChars, colSpecAligned);
     }
     html += renderGermlineGeneRowHtml(lbl, germ, ctx.a2, colSpecAligned);
