@@ -32,22 +32,116 @@ jobs:
             exit 1
           fi
 
+      - name: Resolve previous v* tag
+        if: steps.taginfo.outputs.skip != 'true'
+        id: prevtag
+        env:
+          CURRENT: ${{ steps.taginfo.outputs.tag }}
+        run: |
+          if ! parent=$(git rev-parse "${CURRENT}^" 2>/dev/null); then
+            echo "prev=" >> "$GITHUB_OUTPUT"
+          elif ! prev=$(git describe --tags --abbrev=0 --match='v*' "$parent" 2>/dev/null); then
+            echo "prev=" >> "$GITHUB_OUTPUT"
+          else
+            echo "prev=${prev}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create GitHub release
         if: steps.taginfo.outputs.skip != 'true'
         uses: actions/github-script@v8
         env:
           RELEASE_TAG: ${{ steps.taginfo.outputs.tag }}
+          PREV_TAG: ${{ steps.prevtag.outputs.prev }}
         with:
           script: |
             const fs = require('fs');
+            const { execFileSync } = require('child_process');
+
             const tag = process.env.RELEASE_TAG;
+            const prev = process.env.PREV_TAG || '';
+            const sha = process.env.GITHUB_SHA;
+            const rangeArg = prev ? `${prev}..${sha}` : sha;
+
+            const raw = execFileSync(
+              'git',
+              [
+                'log',
+                rangeArg,
+                '--reverse',
+                '--pretty=format:%H%x00%s%x00%b%x00COMMIT_END%x00',
+              ],
+              { encoding: 'utf8', maxBuffer: 20 * 1024 * 1024 }
+            );
+
+            const blocks = raw.split('\x00COMMIT_END\x00').filter(Boolean);
+            const breaking = [];
+            const features = [];
+            const fixes = [];
+            const other = [];
+
+            const conv = /^(\w+)(?:\([^)]*\))?(!)?:\s*(.+)$/;
+            const breakingFooter = /^BREAKING[ -]CHANGE:\s*(.+)$/gim;
+
+            for (const block of blocks) {
+              const parts = block.split('\x00');
+              const subject = (parts[1] || '').trim();
+              const msgBody = (parts[2] || '').trim();
+              if (!subject) continue;
+
+              const m = subject.match(conv);
+              const footerLines = [...msgBody.matchAll(breakingFooter)]
+                .map((x) => x[1].trim())
+                .filter(Boolean);
+              for (const line of footerLines) {
+                breaking.push(line);
+              }
+
+              if (m) {
+                const type = m[1].toLowerCase();
+                const hasBang = m[2] === '!';
+                const desc = m[3];
+                if (hasBang) {
+                  breaking.push(desc);
+                } else if (type === 'feat') {
+                  features.push(desc);
+                } else if (type === 'fix') {
+                  fixes.push(desc);
+                } else {
+                  other.push(`${type}: ${desc}`);
+                }
+              } else {
+                other.push(subject);
+              }
+            }
+
+            const sections = [];
+            if (breaking.length) {
+              sections.push(
+                '### Breaking changes\n\n' +
+                  [...new Set(breaking)].map((l) => `- ${l}`).join('\n')
+              );
+            }
+            if (features.length) {
+              sections.push('### Features\n\n' + features.map((l) => `- ${l}`).join('\n'));
+            }
+            if (fixes.length) {
+              sections.push('### Fixes\n\n' + fixes.map((l) => `- ${l}`).join('\n'));
+            }
+            if (other.length) {
+              sections.push('### Other\n\n' + other.map((l) => `- ${l}`).join('\n'));
+            }
+
+            const releaseNotes =
+              sections.length > 0
+                ? sections.join('\n\n')
+                : '_No conventional commits in this range._';
 
             const { data: release } = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: tag,
               name: tag,
-              generate_release_notes: true,
+              body: releaseNotes,
             });
 
             const data = fs.readFileSync('index.html');
