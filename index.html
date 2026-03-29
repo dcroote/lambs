@@ -2114,7 +2114,7 @@ const VALID_AA = new Set('ACDEFGHIKLMNPQRSTVWY'.split(''));
 /**
  * If `raw` is non-empty after trim, returns an error message when the field is not
  * a valid amino acid sequence; otherwise null. Allows FASTA headers, whitespace,
- * and digits; every letter must be one of the standard 20.
+ * and * (stop). Digits are not allowed in sequence lines (header lines after `>` are skipped).
  */
 function sequenceInputValidationError(raw) {
   if (raw == null || String(raw).trim() === '') return null;
@@ -2125,14 +2125,18 @@ function sequenceInputValidationError(raw) {
     if (line.startsWith('>')) continue;
     for (let i = 0; i < line.length; i++) {
       const c = line[i];
-      if (c === ' ' || c === '\t' || c === '\r' || (c >= '0' && c <= '9')) continue;
+      if (c === ' ' || c === '\t' || c === '\r') continue;
+      if (c === '*') continue;
+      if (c >= '0' && c <= '9') {
+        return 'Digits are not allowed in amino acid sequences.';
+      }
       if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
         const u = c.toUpperCase();
         if (!VALID_AA.has(u)) {
           return 'Invalid amino acid letter "' + u + '" (use standard 20-letter codes).';
         }
       } else {
-        return 'Invalid character in sequence (only letters, spaces, digits, and FASTA headers are allowed).';
+        return 'Invalid character in sequence (only letters, spaces, *, and FASTA headers are allowed).';
       }
     }
   }
@@ -2149,7 +2153,7 @@ function cleanSequence(raw) {
     .filter(line => !line.startsWith('>'))
     .join('')
     .toUpperCase()
-    .replace(/[^A-Z]/g, '');
+    .replace(/[^A-Z*]/g, '');
 }
 
 function buildRuler(length) {

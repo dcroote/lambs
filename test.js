@@ -112,6 +112,7 @@ section("cleanSequence");
 assert(cleanSequence("evqlves") === "EVQLVES", "converts to uppercase");
 assert(cleanSequence("EVQ LVES") === "EVQLVES", "strips spaces");
 assert(cleanSequence("EVQ123LVES") === "EVQLVES", "strips digits");
+assert(cleanSequence("evq * lves") === "EVQ*LVES", "keeps stop *");
 assert(
   cleanSequence(">header\nEVQL\nVES") === "EVQLVES",
   "strips FASTA header",
@@ -132,16 +133,24 @@ assert(
   "invalid letter X rejected",
 );
 assert(
-  sequenceInputValidationError("EVQ*VES") !== null,
-  "invalid symbol rejected",
+  sequenceInputValidationError("EVQ*VES") === null,
+  "stop * allowed between residues",
+);
+assert(
+  sequenceInputValidationError("EVQ123LVES") !== null,
+  "digits rejected in sequence",
 );
 assert(
   sequenceInputValidationError(">h\nEVQLVES") === null,
   "FASTA header lines allowed",
 );
 assert(
-  sequenceInputValidationError("EVQ 123 LVES") === null,
-  "digits and spaces allowed in field",
+  sequenceInputValidationError("EVQ LVES") === null,
+  "spaces allowed in field",
+);
+assert(
+  sequenceInputValidationError(">gene_1a\nEVQLVES") === null,
+  "digits in FASTA header line allowed",
 );
 assert(
   sequenceInputValidationError(">only\n") !== null,
