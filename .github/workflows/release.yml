@@ -28,18 +28,6 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Resolve release title from tag message
-        if: steps.taginfo.outputs.skip != 'true'
-        env:
-          TAG: ${{ steps.taginfo.outputs.tag }}
-        run: |
-          msg=$(git tag -l --format='%(contents)' "$TAG")
-          msg=$(printf '%s' "$msg")
-          if [ -z "$msg" ]; then
-            msg="$TAG"
-          fi
-          printf '%s\n' "$msg" > .release-title
-
       - name: Create GitHub release
         if: steps.taginfo.outputs.skip != 'true'
         uses: actions/github-script@v8
@@ -49,14 +37,12 @@ jobs:
           script: |
             const fs = require('fs');
             const tag = process.env.RELEASE_TAG;
-            const title =
-              fs.readFileSync('.release-title', 'utf8').replace(/\n$/, '') || tag;
 
             const { data: release } = await github.rest.repos.createRelease({
               owner: context.repo.owner,
               repo: context.repo.repo,
               tag_name: tag,
-              name: title,
+              name: tag,
               generate_release_notes: true,
             });
 
