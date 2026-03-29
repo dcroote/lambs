@@ -2845,9 +2845,44 @@ function parseCSV(text) {
   return rows;
 }
 
+function findDuplicateNames(names) {
+  const counts = {};
+  for (let i = 0; i < names.length; i++) {
+    const n = names[i];
+    counts[n] = (counts[n] || 0) + 1;
+  }
+  const dups = [];
+  for (const k in counts) {
+    if (counts[k] > 1) dups.push(k);
+  }
+  dups.sort();
+  return dups;
+}
+
+/** Resolves per-row names the same way loadCSVToBasket would; does not mutate basket. */
+function collectResolvedCSVNames(rows, vhCol, vlCol, nameCol, startNextId) {
+  const names = [];
+  let nextId = startNextId;
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    const vh = vhCol >= 0 && row[vhCol] ? cleanSequence(row[vhCol]) : '';
+    const vl = vlCol >= 0 && row[vlCol] ? cleanSequence(row[vlCol]) : '';
+    if (!vh && !vl) continue;
+    let name;
+    if (nameCol >= 0 && row[nameCol] && row[nameCol].trim() !== '') {
+      name = row[nameCol].trim();
+    } else {
+      name = 'Seq ' + nextId;
+      nextId++;
+    }
+    names.push(name);
+  }
+  return names;
+}
+
 function loadCSVToBasket(text) {
   const rows = parseCSV(text);
-  if (rows.length < 2) return 0;
+  if (rows.length < 2) return { ok: true, count: 0 };
 
   const headers = rows[0].map(function(h) { return h.trim().toLowerCase(); });
   let vhCol = -1, vlCol = -1, nameCol = -1;
@@ -2857,7 +2892,13 @@ function loadCSVToBasket(text) {
     if (nameCol === -1 && headers[c].includes('name')) nameCol = c;
   }
 
-  if (vhCol === -1 && vlCol === -1) return -1;
+  if (vhCol === -1 && vlCol === -1) return { ok: false, error: 'no_vh_vl_columns' };
+
+  const resolvedNames = collectResolvedCSVNames(rows, vhCol, vlCol, nameCol, basketNextId);
+  const duplicateNames = findDuplicateNames(resolvedNames);
+  if (duplicateNames.length > 0) {
+    return { ok: false, error: 'duplicate_names', duplicates: duplicateNames };
+  }
 
   let count = 0;
   for (let r = 1; r < rows.length; r++) {
@@ -2865,11 +2906,16 @@ function loadCSVToBasket(text) {
     const vh = vhCol >= 0 && row[vhCol] ? cleanSequence(row[vhCol]) : '';
     const vl = vlCol >= 0 && row[vlCol] ? cleanSequence(row[vlCol]) : '';
     if (!vh && !vl) continue;
-    const name = (nameCol >= 0 && row[nameCol]) ? row[nameCol].trim() : 'Seq ' + basketNextId;
+    let name;
+    if (nameCol >= 0 && row[nameCol] && row[nameCol].trim() !== '') {
+      name = row[nameCol].trim();
+    } else {
+      name = 'Seq ' + basketNextId;
+    }
     addToBasket(name, vh, vl);
     count++;
   }
-  return count;
+  return { ok: true, count: count };
 }
 
 // ================================================================
@@ -3378,6 +3424,19 @@ function runMultiAnalysis() {
     return;
   }
 
+  const basketNames = basket.map(function(e) { return e.name; });
+  const dupBasket = findDuplicateNames(basketNames);
+  if (dupBasket.length > 0) {
+    lastClusters = null;
+    if (resultsEl) {
+      resultsEl.innerHTML = '<p class="multi-error" style="color:#cc4444;margin:1em 0">' +
+        'Duplicate sequence names in the basket (each name must be unique): ' +
+        escapeHtml(dupBasket.join(', ')) +
+        '. Fix or clear the basket before clustering.</p>';
+    }
+    return;
+  }
+
   const threshold = parseInt(document.getElementById('cluster-threshold').value, 10) || 70;
   const filterNames = readMsaLiabilityCheckboxState('fl');
   const highlightNames = readMsaLiabilityCheckboxState('hl');
@@ -3451,12 +3510,15 @@ document.getElementById('csv-upload').addEventListener('change', function(e) {
   const statusEl = document.getElementById('csv-status');
   const reader = new FileReader();
   reader.onload = function(ev) {
-    const count = loadCSVToBasket(ev.target.result);
-    if (count === -1) {
+    const result = loadCSVToBasket(ev.target.result);
+    if (!result.ok && result.error === 'no_vh_vl_columns') {
       statusEl.textContent = 'No VH or VL column found in CSV headers.';
       statusEl.style.color = '#cc4444';
+    } else if (!result.ok && result.error === 'duplicate_names') {
+      statusEl.textContent = 'Duplicate sequence names in CSV (not loaded): ' + result.duplicates.join(', ') + '. Each name must be unique.';
+      statusEl.style.color = '#cc4444';
     } else {
-      statusEl.textContent = 'Loaded ' + count + ' sequence(s) from ' + file.name;
+      statusEl.textContent = 'Loaded ' + result.count + ' sequence(s) from ' + file.name;
       statusEl.style.color = '#22aa44';
     }
     // Reset so choosing the same file again fires "change" (browser quirk).

@@ -39,6 +39,8 @@ const wrappedJS = `
   exports.AA_PROPERTY = AA_PROPERTY;
   exports.V_GENE_DB = V_GENE_DB;
   exports.parseCSV = parseCSV;
+  exports.findDuplicateNames = findDuplicateNames;
+  exports.collectResolvedCSVNames = collectResolvedCSVNames;
   exports.escapeHtml = escapeHtml;
   exports.globalAlign = globalAlign;
   exports.pairwiseIdentity = pairwiseIdentity;
@@ -69,6 +71,8 @@ const {
   AA_PROPERTY,
   V_GENE_DB,
   parseCSV,
+  findDuplicateNames,
+  collectResolvedCSVNames,
   escapeHtml,
   globalAlign,
   pairwiseIdentity,
@@ -378,6 +382,38 @@ assert(csv4[1][0] === 'he said "hi"', "parseCSV: escaped double quotes");
 
 const csvEmpty = parseCSV("");
 assert(csvEmpty.length === 0, "parseCSV: empty string returns no rows");
+
+// ============================================================
+// findDuplicateNames / collectResolvedCSVNames (CSV name uniqueness)
+// ============================================================
+section("findDuplicateNames");
+
+assert(
+  findDuplicateNames(["a", "b", "a", "c", "b"]).join(",") === "a,b",
+  "findDuplicateNames: sorted unique dup list",
+);
+assert(findDuplicateNames(["x"]).length === 0, "findDuplicateNames: no dups");
+assert(findDuplicateNames([]).length === 0, "findDuplicateNames: empty");
+
+section("collectResolvedCSVNames");
+
+const csvNamesRows = parseCSV("name,vh,vl\nA,EVQL,DIQ\nB,EVQL,DIQ\n");
+const n1 = collectResolvedCSVNames(csvNamesRows, 1, 2, 0, 1);
+assert(n1.length === 2 && n1[0] === "A" && n1[1] === "B", "collectResolvedCSVNames: uses name column");
+
+const csvDupRows = parseCSV("name,vh\nx,ABC\nx,DEF\n");
+const nDup = collectResolvedCSVNames(csvDupRows, 1, -1, 0, 1);
+assert(
+  findDuplicateNames(nDup).join(",") === "x",
+  "collectResolvedCSVNames: duplicate explicit names detected",
+);
+
+const csvAutoRows = parseCSV("vh,vl\nAB,CD\nEF,GH\n");
+const nAuto = collectResolvedCSVNames(csvAutoRows, 0, 1, -1, 5);
+assert(
+  nAuto[0] === "Seq 5" && nAuto[1] === "Seq 6",
+  "collectResolvedCSVNames: auto Seq N when no name column",
+);
 
 // ============================================================
 // globalAlign (full Needleman-Wunsch)
