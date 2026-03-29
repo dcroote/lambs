@@ -19,13 +19,17 @@ jobs:
       - name: Find v* tag on pushed commit
         id: taginfo
         run: |
-          tag=$(git tag -l 'v*' --points-at "$GITHUB_SHA" | sort -V | tail -n1)
-          if [ -z "$tag" ]; then
+          mapfile -t tags < <(git tag -l 'v*' --points-at "$GITHUB_SHA")
+          count=${#tags[@]}
+          if [ "$count" -eq 0 ]; then
             echo "No v* tag on this commit; skipping release."
             echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          elif [ "$count" -eq 1 ]; then
+            echo "tag=${tags[0]}" >> "$GITHUB_OUTPUT"
             echo "skip=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Multiple v* tags point at this commit; use exactly one. Tags: ${tags[*]}"
+            exit 1
           fi
 
       - name: Create GitHub release
