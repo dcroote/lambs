@@ -32,6 +32,7 @@ const wrappedJS = `
 
   ${pureJS}
   exports.cleanSequence = cleanSequence;
+  exports.sequenceInputValidationError = sequenceInputValidationError;
   exports.buildRuler = buildRuler;
   exports.detectLiabilities = detectLiabilities;
   exports.alignVGene = alignVGene;
@@ -62,6 +63,7 @@ new Function(wrappedJS).call(ctx);
 
 const {
   cleanSequence,
+  sequenceInputValidationError,
   buildRuler,
   detectLiabilities,
   alignVGene,
@@ -115,6 +117,36 @@ assert(
   "strips FASTA header",
 );
 assert(cleanSequence("  \n  ") === "", "empty after stripping");
+
+// ============================================================
+// sequenceInputValidationError
+// ============================================================
+section("sequenceInputValidationError");
+
+assert(sequenceInputValidationError("") === null, "empty string ok");
+assert(sequenceInputValidationError("   ") === null, "whitespace-only ok");
+assert(sequenceInputValidationError("EVQLVES") === null, "standard AA ok");
+assert(sequenceInputValidationError("evqlves") === null, "lowercase AA ok");
+assert(
+  sequenceInputValidationError("EVQXVES") !== null,
+  "invalid letter X rejected",
+);
+assert(
+  sequenceInputValidationError("EVQ*VES") !== null,
+  "invalid symbol rejected",
+);
+assert(
+  sequenceInputValidationError(">h\nEVQLVES") === null,
+  "FASTA header lines allowed",
+);
+assert(
+  sequenceInputValidationError("EVQ 123 LVES") === null,
+  "digits and spaces allowed in field",
+);
+assert(
+  sequenceInputValidationError(">only\n") !== null,
+  "header-only is invalid",
+);
 
 // ============================================================
 // buildRuler

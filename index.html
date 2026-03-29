@@ -2108,6 +2108,41 @@ const LIABILITY_HIGHLIGHT_COLORS = {
 // UTILITY FUNCTIONS
 // ================================================================
 
+/** Standard 20 amino acid one-letter codes (uppercase). */
+const VALID_AA = new Set('ACDEFGHIKLMNPQRSTVWY'.split(''));
+
+/**
+ * If `raw` is non-empty after trim, returns an error message when the field is not
+ * a valid amino acid sequence; otherwise null. Allows FASTA headers, whitespace,
+ * and digits; every letter must be one of the standard 20.
+ */
+function sequenceInputValidationError(raw) {
+  if (raw == null || String(raw).trim() === '') return null;
+  const str = String(raw);
+  const lines = str.split(/\n/);
+  for (let li = 0; li < lines.length; li++) {
+    const line = lines[li];
+    if (line.startsWith('>')) continue;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (c === ' ' || c === '\t' || c === '\r' || (c >= '0' && c <= '9')) continue;
+      if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) {
+        const u = c.toUpperCase();
+        if (!VALID_AA.has(u)) {
+          return 'Invalid amino acid letter "' + u + '" (use standard 20-letter codes).';
+        }
+      } else {
+        return 'Invalid character in sequence (only letters, spaces, digits, and FASTA headers are allowed).';
+      }
+    }
+  }
+  const cleaned = cleanSequence(str);
+  if (cleaned.length === 0) {
+    return 'No amino acids found (empty or header-only).';
+  }
+  return null;
+}
+
 function cleanSequence(raw) {
   return raw
     .split('\n')
@@ -2707,6 +2742,18 @@ function renderChainPanel(seq, chainType) {
 function analyze() {
   const vhRaw = document.getElementById('vh-input').value.trim();
   const vlRaw = document.getElementById('vl-input').value.trim();
+  const vhErr = sequenceInputValidationError(vhRaw);
+  const vlErr = sequenceInputValidationError(vlRaw);
+  if (vhErr || vlErr) {
+    const parts = [];
+    if (vhErr) parts.push('VH: ' + escapeHtml(vhErr));
+    if (vlErr) parts.push('VL: ' + escapeHtml(vlErr));
+    document.getElementById('results').innerHTML =
+      '<div class="no-data">' + parts.join('<br>') + '</div>';
+    document.getElementById('results').style.display = '';
+    document.getElementById('legend').style.display = 'none';
+    return;
+  }
   const vhSeq = cleanSequence(vhRaw);
   const vlSeq = cleanSequence(vlRaw);
 
@@ -2845,9 +2892,13 @@ function parseCSV(text) {
   return rows;
 }
 
+/**
+ * Validates and loads CSV rows into the basket. On success returns { ok: true, count }.
+ * If any row with VH/VL data fails validation, returns { ok: false, message } and does not modify the basket.
+ */
 function loadCSVToBasket(text) {
   const rows = parseCSV(text);
-  if (rows.length < 2) return 0;
+  if (rows.length < 2) return { ok: true, count: 0 };
 
   const headers = rows[0].map(function(h) { return h.trim().toLowerCase(); });
   let vhCol = -1, vlCol = -1, nameCol = -1;
@@ -2857,19 +2908,36 @@ function loadCSVToBasket(text) {
     if (nameCol === -1 && headers[c].includes('name')) nameCol = c;
   }
 
-  if (vhCol === -1 && vlCol === -1) return -1;
+  if (vhCol === -1 && vlCol === -1) return { ok: false, code: 'no-columns' };
 
-  let count = 0;
+  const pending = [];
   for (let r = 1; r < rows.length; r++) {
     const row = rows[r];
-    const vh = vhCol >= 0 && row[vhCol] ? cleanSequence(row[vhCol]) : '';
-    const vl = vlCol >= 0 && row[vlCol] ? cleanSequence(row[vlCol]) : '';
+    const vhRaw = vhCol >= 0 && row[vhCol] ? String(row[vhCol]) : '';
+    const vlRaw = vlCol >= 0 && row[vlCol] ? String(row[vlCol]) : '';
+    const vh = vhRaw ? cleanSequence(vhRaw) : '';
+    const vl = vlRaw ? cleanSequence(vlRaw) : '';
     if (!vh && !vl) continue;
+    const vhErr = sequenceInputValidationError(vhRaw);
+    const vlErr = sequenceInputValidationError(vlRaw);
+    if (vhErr || vlErr) {
+      const rowLabel = r + 1;
+      const bits = [];
+      if (vhErr) bits.push('VH: ' + vhErr);
+      if (vlErr) bits.push('VL: ' + vlErr);
+      return {
+        ok: false,
+        message: 'Row ' + rowLabel + ': ' + bits.join(' ')
+      };
+    }
     const name = (nameCol >= 0 && row[nameCol]) ? row[nameCol].trim() : 'Seq ' + basketNextId;
-    addToBasket(name, vh, vl);
-    count++;
+    pending.push({ name: name, vh: vh, vl: vl });
   }
-  return count;
+
+  for (let i = 0; i < pending.length; i++) {
+    addToBasket(pending[i].name, pending[i].vh, pending[i].vl);
+  }
+  return { ok: true, count: pending.length };
 }
 
 // ================================================================
@@ -3432,12 +3500,27 @@ document.querySelectorAll('.tab-btn').forEach(function(btn) {
 document.getElementById('add-to-basket-btn').addEventListener('click', function() {
   const vhRaw = document.getElementById('vh-input').value.trim();
   const vlRaw = document.getElementById('vl-input').value.trim();
+  const vhErr = sequenceInputValidationError(vhRaw);
+  const vlErr = sequenceInputValidationError(vlRaw);
+  const status = document.getElementById('basket-status');
+  if (vhErr || vlErr) {
+    const parts = [];
+    if (vhErr) parts.push('VH: ' + vhErr);
+    if (vlErr) parts.push('VL: ' + vlErr);
+    status.textContent = parts.join(' ');
+    status.style.color = '#cc4444';
+    status.style.display = '';
+    status.style.opacity = '1';
+    setTimeout(function() { status.style.opacity = '0'; }, 3500);
+    setTimeout(function() { status.style.display = 'none'; status.style.opacity = '1'; status.style.color = ''; }, 4000);
+    return;
+  }
   const vh = cleanSequence(vhRaw);
   const vl = cleanSequence(vlRaw);
   if (!vh && !vl) return;
   addToBasket('Seq ' + basketNextId, vh, vl);
-  const status = document.getElementById('basket-status');
   status.textContent = 'Added to basket (' + basket.length + ' total)';
+  status.style.color = '#22aa44';
   status.style.display = '';
   status.style.opacity = '1';
   setTimeout(function() { status.style.opacity = '0'; }, 2000);
@@ -3451,12 +3534,15 @@ document.getElementById('csv-upload').addEventListener('change', function(e) {
   const statusEl = document.getElementById('csv-status');
   const reader = new FileReader();
   reader.onload = function(ev) {
-    const count = loadCSVToBasket(ev.target.result);
-    if (count === -1) {
+    const result = loadCSVToBasket(ev.target.result);
+    if (!result.ok && result.code === 'no-columns') {
       statusEl.textContent = 'No VH or VL column found in CSV headers.';
       statusEl.style.color = '#cc4444';
+    } else if (!result.ok) {
+      statusEl.textContent = result.message + ' No sequences were loaded.';
+      statusEl.style.color = '#cc4444';
     } else {
-      statusEl.textContent = 'Loaded ' + count + ' sequence(s) from ' + file.name;
+      statusEl.textContent = 'Loaded ' + result.count + ' sequence(s) from ' + file.name;
       statusEl.style.color = '#22aa44';
     }
     // Reset so choosing the same file again fires "change" (browser quirk).
