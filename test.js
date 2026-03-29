@@ -125,7 +125,14 @@ assert(cleanSequence("  \n  ") === "", "empty after stripping");
 section("sequenceInputValidationError");
 
 assert(sequenceInputValidationError("") === null, "empty string ok");
-assert(sequenceInputValidationError("   ") === null, "whitespace-only ok");
+assert(
+  sequenceInputValidationError("   ") !== null,
+  "whitespace-only rejected",
+);
+assert(
+  sequenceInputValidationError("\n\t  \r") !== null,
+  "whitespace-only multiline rejected",
+);
 assert(sequenceInputValidationError("EVQLVES") === null, "standard AA ok");
 assert(sequenceInputValidationError("evqlves") === null, "lowercase AA ok");
 assert(

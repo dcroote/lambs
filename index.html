@@ -2112,13 +2112,20 @@ const LIABILITY_HIGHLIGHT_COLORS = {
 const VALID_AA = new Set('ACDEFGHIKLMNPQRSTVWY'.split(''));
 
 /**
- * If `raw` is non-empty after trim, returns an error message when the field is not
- * a valid amino acid sequence; otherwise null. Allows FASTA headers, whitespace,
- * and * (stop). Digits are not allowed in sequence lines (header lines after `>` are skipped).
+ * Validates one sequence field. Returns null if the field is omitted (null, undefined, or
+ * entirely empty/whitespace as trimmed). Returns an error if the field contains only
+ * whitespace, or if content fails amino-acid rules. Allows FASTA headers, internal
+ * whitespace, and * (stop). Digits are not allowed in sequence lines (header lines after
+ * `>` are skipped).
  */
 function sequenceInputValidationError(raw) {
-  if (raw == null || String(raw).trim() === '') return null;
+  if (raw == null) return null;
   const str = String(raw);
+  const trimmed = str.trim();
+  if (trimmed === '') {
+    if (str.length > 0) return 'Sequence cannot be only whitespace.';
+    return null;
+  }
   const lines = str.split(/\n/);
   for (let li = 0; li < lines.length; li++) {
     const line = lines[li];
@@ -2744,8 +2751,8 @@ function renderChainPanel(seq, chainType) {
 // ================================================================
 
 function analyze() {
-  const vhRaw = document.getElementById('vh-input').value.trim();
-  const vlRaw = document.getElementById('vl-input').value.trim();
+  const vhRaw = document.getElementById('vh-input').value;
+  const vlRaw = document.getElementById('vl-input').value;
   const vhErr = sequenceInputValidationError(vhRaw);
   const vlErr = sequenceInputValidationError(vlRaw);
   if (vhErr || vlErr) {
@@ -2917,13 +2924,10 @@ function loadCSVToBasket(text) {
   const pending = [];
   for (let r = 1; r < rows.length; r++) {
     const row = rows[r];
-    const vhRaw = vhCol >= 0 && row[vhCol] ? String(row[vhCol]) : '';
-    const vlRaw = vlCol >= 0 && row[vlCol] ? String(row[vlCol]) : '';
-    const vh = vhRaw ? cleanSequence(vhRaw) : '';
-    const vl = vlRaw ? cleanSequence(vlRaw) : '';
-    if (!vh && !vl) continue;
-    const vhErr = sequenceInputValidationError(vhRaw);
-    const vlErr = sequenceInputValidationError(vlRaw);
+    const vhRaw = vhCol >= 0 && row[vhCol] != null ? String(row[vhCol]) : '';
+    const vlRaw = vlCol >= 0 && row[vlCol] != null ? String(row[vlCol]) : '';
+    const vhErr = vhRaw.length ? sequenceInputValidationError(vhRaw) : null;
+    const vlErr = vlRaw.length ? sequenceInputValidationError(vlRaw) : null;
     if (vhErr || vlErr) {
       const rowLabel = r + 1;
       const bits = [];
@@ -2934,6 +2938,9 @@ function loadCSVToBasket(text) {
         message: 'Row ' + rowLabel + ': ' + bits.join(' ')
       };
     }
+    const vh = vhRaw ? cleanSequence(vhRaw) : '';
+    const vl = vlRaw ? cleanSequence(vlRaw) : '';
+    if (!vh && !vl) continue;
     const name = (nameCol >= 0 && row[nameCol]) ? row[nameCol].trim() : 'Seq ' + basketNextId;
     pending.push({ name: name, vh: vh, vl: vl });
   }
@@ -3502,8 +3509,8 @@ document.querySelectorAll('.tab-btn').forEach(function(btn) {
 });
 
 document.getElementById('add-to-basket-btn').addEventListener('click', function() {
-  const vhRaw = document.getElementById('vh-input').value.trim();
-  const vlRaw = document.getElementById('vl-input').value.trim();
+  const vhRaw = document.getElementById('vh-input').value;
+  const vlRaw = document.getElementById('vl-input').value;
   const vhErr = sequenceInputValidationError(vhRaw);
   const vlErr = sequenceInputValidationError(vlRaw);
   const status = document.getElementById('basket-status');
