@@ -514,10 +514,16 @@ h1 {
       <div class="input-row">
         <div class="input-group">
           <label for="vh-input">VH Sequence</label>
+          <p style="font-size:0.85em;color:#888">
+            Supported formats: amino acid sequence or FASTA.
+          </p>
           <textarea id="vh-input" rows="3" placeholder="Paste VH amino acid sequence (or FASTA)..."></textarea>
         </div>
         <div class="input-group">
           <label for="vl-input">VL Sequence</label>
+          <p style="font-size:0.85em;color:#888">
+            Supported formats: amino acid sequence or FASTA.
+          </p>
           <textarea id="vl-input" rows="3" placeholder="Paste VL amino acid sequence (or FASTA)..."></textarea>
         </div>
       </div>
@@ -586,6 +592,9 @@ h1 {
         <input type="file" id="csv-upload" accept=".csv,.txt">
         <span id="csv-status" style="font-size:0.85em;color:#888"></span>
       </div>
+      <p style="font-size:0.85em;color:#888">
+        CSV format expects 3 columns (case-insensitive, any order): <b>Name,VH,VL</b>
+      </p>
       <div class="basket-table-wrap">
         <table class="basket-table">
           <thead>
