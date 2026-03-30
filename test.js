@@ -32,6 +32,8 @@ const wrappedJS = `
 
   ${pureJS}
   exports.cleanSequence = cleanSequence;
+  exports.validateSequence = validateSequence;
+  exports.validateBasketNames = validateBasketNames;
   exports.buildRuler = buildRuler;
   exports.detectLiabilities = detectLiabilities;
   exports.alignVGene = alignVGene;
@@ -62,6 +64,8 @@ new Function(wrappedJS).call(ctx);
 
 const {
   cleanSequence,
+  validateSequence,
+  validateBasketNames,
   buildRuler,
   detectLiabilities,
   alignVGene,
@@ -109,12 +113,110 @@ section("cleanSequence");
 
 assert(cleanSequence("evqlves") === "EVQLVES", "converts to uppercase");
 assert(cleanSequence("EVQ LVES") === "EVQLVES", "strips spaces");
-assert(cleanSequence("EVQ123LVES") === "EVQLVES", "strips digits");
 assert(
   cleanSequence(">header\nEVQL\nVES") === "EVQLVES",
   "strips FASTA header",
 );
 assert(cleanSequence("  \n  ") === "", "empty after stripping");
+assert(cleanSequence("EVQLVES*") === "EVQLVES*", "retains stop codon *");
+assert(
+  cleanSequence(">sp|P12345|MABS_HUMAN\nEVQLVES") === "EVQLVES",
+  "strips multi-word FASTA header",
+);
+
+// ============================================================
+// validateSequence
+// ============================================================
+section("validateSequence");
+
+assert(validateSequence("") === null, "empty string is valid (blank allowed)");
+assert(
+  validateSequence("   ") === null,
+  "whitespace-only is valid (blank allowed)",
+);
+assert(validateSequence("EVQLVES") === null, "clean uppercase AA is valid");
+assert(validateSequence("evqlves") === null, "lowercase AA is valid");
+assert(
+  validateSequence("EVQ LVES") === null,
+  "spaces in sequence are valid (stripped)",
+);
+assert(validateSequence(">header\nEVQLVES") === null, "FASTA format is valid");
+assert(validateSequence("EVQLVES*") === null, "trailing stop codon * is valid");
+assert(
+  validateSequence("EVQ*LV*ES") === null,
+  "embedded stop codons are valid",
+);
+
+assert(
+  validateSequence("EVQ123LVES") !== null,
+  "digits in sequence are invalid",
+);
+assert(validateSequence("EVQ1LVES") !== null, "single digit is invalid");
+assert(validateSequence("EVQ-LVES") !== null, "dash is invalid");
+assert(validateSequence("EVQ_LVES") !== null, "underscore is invalid");
+assert(validateSequence("EVQ!LVES") !== null, "exclamation mark is invalid");
+assert(validateSequence("EVQ.LVES") !== null, "period is invalid");
+
+// Error string should mention the offending character
+const digitErr = validateSequence("EVQ1LVES");
+assert(
+  digitErr && digitErr.includes("1"),
+  "digit error message mentions the bad char",
+);
+const symbolErr = validateSequence("EVQ-LV@ES");
+assert(
+  symbolErr && symbolErr.includes("-") && symbolErr.includes("@"),
+  "symbol error lists all bad chars",
+);
+
+// Blank after stripping FASTA header is valid (VH-only mode etc.)
+assert(
+  validateSequence(">header\n") === null,
+  "FASTA header with no sequence is valid (blank)",
+);
+
+// ============================================================
+// validateBasketNames
+// ============================================================
+section("validateBasketNames");
+
+assert(validateBasketNames([]) === null, "empty basket has no duplicate names");
+assert(
+  validateBasketNames([{ id: 1, name: "mAb1", vh: "", vl: "" }]) === null,
+  "single entry has no duplicate names",
+);
+assert(
+  validateBasketNames([
+    { id: 1, name: "mAb1", vh: "", vl: "" },
+    { id: 2, name: "mAb2", vh: "", vl: "" },
+    { id: 3, name: "mAb3", vh: "", vl: "" },
+  ]) === null,
+  "all unique names passes",
+);
+assert(
+  validateBasketNames([
+    { id: 1, name: "mAb1", vh: "", vl: "" },
+    { id: 2, name: "mAb1", vh: "", vl: "" },
+  ]) !== null,
+  "duplicate names returns error",
+);
+const dupeErr = validateBasketNames([
+  { id: 1, name: "Alpha", vh: "", vl: "" },
+  { id: 2, name: "Beta", vh: "", vl: "" },
+  { id: 3, name: "Alpha", vh: "", vl: "" },
+  { id: 4, name: "Beta", vh: "", vl: "" },
+]);
+assert(dupeErr !== null, "multiple duplicates returns error");
+assert(dupeErr.includes("Alpha"), "error message names 'Alpha'");
+assert(dupeErr.includes("Beta"), "error message names 'Beta'");
+assert(
+  validateBasketNames([
+    { id: 1, name: "mAb1", vh: "", vl: "" },
+    { id: 2, name: "mAb1", vh: "", vl: "" },
+    { id: 3, name: "mAb2", vh: "", vl: "" },
+  ]) !== null,
+  "one duplicate among uniques is still an error",
+);
 
 // ============================================================
 // buildRuler

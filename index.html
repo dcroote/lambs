@@ -2123,7 +2123,38 @@ function cleanSequence(raw) {
     .filter(line => !line.startsWith('>'))
     .join('')
     .toUpperCase()
-    .replace(/[^A-Z]/g, '');
+    .replace(/[^A-Z*]/g, '');
+}
+
+// Returns null if the input is valid (blank, FASTA, or amino-acid-only), or
+// an error string describing the problem. The only non-letter character
+// accepted is '*' (stop codon), which is stripped during cleanSequence.
+function validateSequence(raw) {
+  if (!raw || !raw.trim()) return null;
+  const inner = raw
+    .split('\n')
+    .filter(line => !line.startsWith('>'))
+    .join('')
+    .replace(/\s/g, '');
+  if (!inner) return null;
+  const bad = inner.replace(/[A-Za-z*]/g, '');
+  if (bad.length === 0) return null;
+  const unique = [...new Set(bad.split(''))].join('", "');
+  return 'Invalid character(s) in sequence: "' + unique + '". Only amino acids and * are allowed.';
+}
+
+// Returns null if all basket entries have unique names, or an error string
+// listing the duplicated names.
+function validateBasketNames(basketArr) {
+  const seen = Object.create(null);
+  const dupes = [];
+  for (const entry of basketArr) {
+    const n = entry.name;
+    if (seen[n] && !dupes.includes(n)) dupes.push(n);
+    seen[n] = true;
+  }
+  if (dupes.length === 0) return null;
+  return 'Duplicate mAb name(s): "' + dupes.join('", "') + '". Each entry in Multiple Sequence Analysis must have a unique name.';
 }
 
 function buildRuler(length) {
@@ -2716,6 +2747,18 @@ function renderChainPanel(seq, chainType) {
 function analyze() {
   const vhRaw = document.getElementById('vh-input').value.trim();
   const vlRaw = document.getElementById('vl-input').value.trim();
+
+  const vhErr = validateSequence(vhRaw);
+  const vlErr = validateSequence(vlRaw);
+  if (vhErr || vlErr) {
+    const msgs = [vhErr && ('VH: ' + vhErr), vlErr && ('VL: ' + vlErr)].filter(Boolean);
+    document.getElementById('results').innerHTML =
+      '<div class="no-data" style="color:#c0392b">' + msgs.map(escapeHtml).join('<br>') + '</div>';
+    document.getElementById('results').style.display = '';
+    document.getElementById('legend').style.display = 'none';
+    return;
+  }
+
   const vhSeq = cleanSequence(vhRaw);
   const vlSeq = cleanSequence(vlRaw);
 
@@ -3387,6 +3430,12 @@ function runMultiAnalysis() {
     return;
   }
 
+  const nameErr = validateBasketNames(basket);
+  if (nameErr) {
+    resultsEl.innerHTML = '<div class="no-data" style="color:#c0392b">' + escapeHtml(nameErr) + '</div>';
+    return;
+  }
+
   const threshold = parseInt(document.getElementById('cluster-threshold').value, 10) || 70;
   const filterNames = readMsaLiabilityCheckboxState('fl');
   const highlightNames = readMsaLiabilityCheckboxState('hl');
@@ -3441,11 +3490,25 @@ document.querySelectorAll('.tab-btn').forEach(function(btn) {
 document.getElementById('add-to-basket-btn').addEventListener('click', function() {
   const vhRaw = document.getElementById('vh-input').value.trim();
   const vlRaw = document.getElementById('vl-input').value.trim();
+
+  const vhErr = validateSequence(vhRaw);
+  const vlErr = validateSequence(vlRaw);
+  const status = document.getElementById('basket-status');
+  if (vhErr || vlErr) {
+    const msgs = [vhErr && ('VH: ' + vhErr), vlErr && ('VL: ' + vlErr)].filter(Boolean);
+    status.textContent = msgs.join(' | ');
+    status.style.color = '#c0392b';
+    status.style.display = '';
+    status.style.opacity = '1';
+    setTimeout(function() { status.style.opacity = '0'; }, 4000);
+    setTimeout(function() { status.style.display = 'none'; status.style.color = ''; status.style.opacity = '1'; }, 4500);
+    return;
+  }
+
   const vh = cleanSequence(vhRaw);
   const vl = cleanSequence(vlRaw);
   if (!vh && !vl) return;
   addToBasket('Seq ' + basketNextId, vh, vl);
-  const status = document.getElementById('basket-status');
   status.textContent = 'Added to basket (' + basket.length + ' total)';
   status.style.display = '';
   status.style.opacity = '1';
