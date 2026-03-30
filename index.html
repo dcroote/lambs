@@ -296,7 +296,11 @@ h1 {
 
 .basket-table-wrap {
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: min(45vh, 18rem);
   margin: 8px 0;
+  border: 1px solid #eee;
+  border-radius: 2px;
 }
 
 .basket-table {
@@ -320,6 +324,13 @@ h1 {
   font-weight: bold;
   color: #555;
   border-bottom: 2px solid #ddd;
+}
+
+.basket-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  box-shadow: 0 1px 0 #ddd;
 }
 
 .basket-table tr:hover { background: #f9f9fb; }
