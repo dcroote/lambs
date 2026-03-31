@@ -2,14 +2,19 @@
 # /// script
 # requires-python = ">=3.10"
 # ///
-"""Parse germline FASTA & IgBLAST TSV files and inject V_GENE_DB into index.html."""
+"""Parse germline FASTA & IgBLAST TSV files and inject V_GENE_DB into index.html.
+
+Usage (from repository root):
+    python scripts/populate_germlines.py
+"""
 
 import json
 import re
 from pathlib import Path
 
-GERMLINES_DIR = Path(__file__).parent / "germlines"
-HTML_FILE = Path(__file__).parent / "index.html"
+ROOT = Path(__file__).resolve().parent.parent
+GERMLINES_DIR = ROOT / "germlines"
+HTML_FILE = ROOT / "index.html"
 
 SPECIES = ["human", "mouse"]
 GENES = ["ighv", "igkv", "iglv"]

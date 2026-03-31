@@ -39,7 +39,13 @@ node test.js
 ### Populating the V_GENE_DB object in index.html
 
 ```
-python3 populate_germlines.py
+python3 scripts/populate_germlines.py
+```
+
+### Populating the APPROVED_MAB_STATS object in index.html
+
+```
+python3 scripts/compute_reference_stats.py
 ```
 
 ### Background: IgBLAST used to annotate CDRs
