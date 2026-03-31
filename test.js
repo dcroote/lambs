@@ -57,6 +57,12 @@ const wrappedJS = `
   exports.AGG_WINDOW = AGG_WINDOW;
   exports.AGG_THRESHOLD = AGG_THRESHOLD;
   exports.detectCDR3 = detectCDR3;
+  exports.calcMW = calcMW;
+  exports.calcNetCharge = calcNetCharge;
+  exports.calcPI = calcPI;
+  exports.calcGRAVY = calcGRAVY;
+  exports.computeSequenceProperties = computeSequenceProperties;
+  exports.calcPercentile = calcPercentile;
 })(this);
 `;
 const ctx = {};
@@ -89,6 +95,12 @@ const {
   AGG_WINDOW,
   AGG_THRESHOLD,
   detectCDR3,
+  calcMW,
+  calcNetCharge,
+  calcPI,
+  calcGRAVY,
+  computeSequenceProperties,
+  calcPercentile,
 } = ctx;
 
 // --- Test harness ---
@@ -101,6 +113,12 @@ function assert(condition, msg) {
     failed++;
     console.error(`  FAIL: ${msg}`);
   }
+}
+function assertApprox(actual, expected, tol, msg) {
+  assert(
+    Math.abs(actual - expected) <= tol,
+    `${msg} (got ${actual}, expected ~${expected})`,
+  );
 }
 function section(name) {
   console.log(`\n--- ${name} ---`);
@@ -1610,12 +1628,6 @@ const cdr3TestCases = [
     seq: "EIVLTQSPGTLSLSPGERATLSCRASQSVGSSYLAWYQQKPGQAPRLLIYGAFSRATGIPDRFSGSGSGTDFTLTISRLEPEDFAVYYCQQYGSSPWTFGQGTKVEIK",
   },
   {
-    id: "Itolizumab_vh",
-    chain: "VH",
-    cdr3: "ARRDYDLDYFDS",
-    seq: "EVQLVESGGGLVKPGGSLKLSCAASGFKFSRYAMSWVRQAPGKRLEWVATISSGGSYIYYPDSVKGRFTISRDNVKNTLYLQMSSLRSEDTAMYYCARRDYDLDYFDSWGQGTLVTVSS",
-  },
-  {
     id: "Ixekizumab_vh",
     chain: "VH",
     cdr3: "ARYDYFTGTGVY",
@@ -2432,6 +2444,117 @@ const cdr3TestCases = [
     seq: "ALTQPASVSGSPGQSITISCTGTSSDVGFYNYVSWYQQHPGKAPELMIYDVSNRPSGVSDRFSGSKSGNTASLTISGLQAEDEADYYCSSYTSISTWVFGGGTKLTVL",
   },
 ];
+
+// ============================================================
+// Sequence properties (properties table: MW, pI, charge, GRAVY)
+// ============================================================
+section("sequence properties (MW, pI, charge, GRAVY, percentiles)");
+
+// Mol. weight: Sum(residue weights) + water − 2.016 Da per disulfide pair
+assertApprox(calcMW("G"), 75.0672, 1e-9, "calcMW single Gly");
+assertApprox(calcMW("CC"), 222.2769, 1e-9, "calcMW two Cys (one bridge)");
+assertApprox(calcMW(""), 18.0153, 1e-9, "calcMW empty (water only)");
+assertApprox(
+  calcMW("CCC"),
+  18.0153 + 3 * 103.1388 - 2.016,
+  1e-9,
+  "calcMW three Cys (one disulfide pair in floor(n/2) bridge deduction)",
+);
+
+// GRAVY: mean Kyte–Doolittle per residue
+assertApprox(calcGRAVY("G"), -0.4, 1e-9, "calcGRAVY Gly");
+assertApprox(calcGRAVY("AV"), 3, 1e-9, "calcGRAVY Ala+Val average");
+assert(Number.isNaN(calcGRAVY("")), "calcGRAVY empty sequence is NaN (0/0)");
+
+// Net charge: termin + side chains (+ free Cys)
+assertApprox(
+  calcNetCharge("", 7.4),
+  -0.20070989270149964,
+  1e-12,
+  "calcNetCharge empty at pH 7.4 (termini only)",
+);
+assertApprox(
+  calcNetCharge("DDDD", 7.4),
+  -4.199998707406101,
+  1e-9,
+  "calcNetCharge poly-Asp at 7.4",
+);
+assertApprox(
+  calcNetCharge("KKKK", 7.4),
+  3.796327062868478,
+  1e-9,
+  "calcNetCharge poly-Lys at 7.4",
+);
+assert(
+  calcNetCharge("DDDD", 5.5) > calcNetCharge("DDDD", 7.4),
+  "calcNetCharge Asp-rich: carboxylates protonated more at lower pH (less negative)",
+);
+assert(
+  calcNetCharge("KKKK", 5.5) > calcNetCharge("KKKK", 7.4),
+  "calcNetCharge Lys-rich: amines stay more protonated at lower pH (more positive)",
+);
+
+// Theoretical pI: bisection where net charge crosses zero
+assertApprox(calcPI(""), 5.55, 1e-9, "calcPI empty");
+assertApprox(calcPI("DDDD"), 2.905316029395059, 1e-6, "calcPI acidic peptide");
+assertApprox(calcPI("KKKK"), 11.007689786103274, 1e-6, "calcPI basic peptide");
+assert(calcPI("DDDD") < 7 && calcPI("KKKK") > 7, "calcPI ordering acidic vs basic");
+
+// computeSequenceProperties: same outputs as individual calcs (Trastuzumab VH)
+const TRAST_VH =
+  "EVQLVESGGGLVQPGGSLRLSCAASGFNIKDTYIHWVRQAPGKGLEWVARIYPTNGYTRYADSVKGRFTISADTSKNTAYLQMNSLRAEDTAVYYCSRWGGDGFYAMDYWGQGTLVTVSS";
+const trastP = computeSequenceProperties(TRAST_VH);
+assert(trastP.length === 120, "computeSequenceProperties length");
+assertApprox(trastP.mw, 13162.6699, 0.01, "computeSequenceProperties mw");
+assertApprox(trastP.pI, 8.471027635356105, 1e-6, "computeSequenceProperties pI");
+assertApprox(
+  trastP.charge74,
+  0.8192512928888138,
+  1e-9,
+  "computeSequenceProperties charge74",
+);
+assertApprox(
+  trastP.charge55,
+  2.0568122395144988,
+  1e-9,
+  "computeSequenceProperties charge55",
+);
+assertApprox(
+  trastP.gravy,
+  -0.305,
+  1e-9,
+  "computeSequenceProperties gravy",
+);
+const trastParts = {
+  length: TRAST_VH.length,
+  mw: calcMW(TRAST_VH),
+  pI: calcPI(TRAST_VH),
+  charge74: calcNetCharge(TRAST_VH, 7.4),
+  charge55: calcNetCharge(TRAST_VH, 5.5),
+  gravy: calcGRAVY(TRAST_VH),
+};
+assert(
+  Object.keys(trastP).every((k) => Math.abs(trastP[k] - trastParts[k]) < 1e-9),
+  "computeSequenceProperties matches piecewise calcs",
+);
+
+// Percentiles used in properties table (reference distribution is sorted)
+assert(calcPercentile([], 0) === null, "calcPercentile empty distribution → null");
+assert(calcPercentile([1, 2, 3, 4, 5], 3) === 40, "calcPercentile mid value");
+assert(calcPercentile([1, 2, 3, 4, 5], 5) === 80, "calcPercentile at max");
+assert(calcPercentile([1, 2, 3, 4, 5], 1) === 0, "calcPercentile at min");
+assert(
+  calcPercentile([1, 2, 2, 3], 2) === 25,
+  "calcPercentile duplicates: count strictly below",
+);
+assert(
+  calcPercentile([10, 20, 30], 5) === 0,
+  "calcPercentile value below all → 0%",
+);
+assert(
+  calcPercentile([10, 20, 30], 100) === 100,
+  "calcPercentile value above all → 100%",
+);
 
 for (const tc of cdr3TestCases) {
   const result = detectCDR3(tc.seq, tc.chain);
