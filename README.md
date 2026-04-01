@@ -25,9 +25,13 @@ Code is open source, permissively licensed under Apache 2.0, and available at [h
 4. View the results
 5. Make better antibodies for humankind!
 
-## Screenshot
+## Screenshot - Single mAb Analysis
 
-<img src="screenshot.png" alt="Screenshot of the analysis dashboard" width="1200" height="1130">
+<img src="screenshot_single_mab_analysis.png" alt="Screenshot of single mAb analysis" width="1200" height="1092">
+
+## Screenshot - Multiple mAb Analysis
+
+<img src="screenshot_multiple_mab_analysis.png" alt="Screenshot of multiple mAb analysis" width="1200" height="1175">
 
 ## Developer notes
 
