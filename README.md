@@ -31,7 +31,7 @@ Code is open source, permissively licensed under Apache 2.0, and available at [h
 
 ## Screenshot - Multiple mAb Analysis
 
-<img src="screenshot_multiple_mab_analysis.png" alt="Screenshot of multiple mAb analysis" width="1200" height="1175">
+<img src="screenshot_multiple_mab_analysis.png" alt="Screenshot of multiple mAb analysis" width="1200" height="1172">
 
 ## Developer notes
 

@@ -630,9 +630,11 @@ h1 {
     <div class="basket-section">
       <h3>Sequence Basket</h3>
       <div class="basket-upload-row">
-        <label for="csv-upload">Upload CSV:</label>
-        <input type="file" id="csv-upload" accept=".csv,.txt">
+        <label>Upload CSV:</label>
+        <input type="file" id="csv-upload" accept=".csv,.txt" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);opacity:0">
+        <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('csv-upload').click()">Choose File</button>
         <span id="csv-status" style="font-size:0.85em;color:#888"></span>
+        <span id="load-example-link" style="font-size:0.85em;color:#888;display:none">(<a href="#" onclick="loadExampleCSV();return false;" style="color:#2266cc;text-decoration:underline;cursor:pointer">load an example set</a>)</span>
       </div>
       <p style="font-size:0.85em;color:#888">
         CSV format expects 3 columns (case-insensitive, any order): <b>Name,VH,VL</b>
@@ -2995,6 +2997,8 @@ function clearBasket() {
   basket = [];
   const csvInput = document.getElementById('csv-upload');
   if (csvInput) csvInput.value = '';
+  const statusEl = document.getElementById('csv-status');
+  if (statusEl) statusEl.textContent = '';
   renderBasket();
 }
 
@@ -3003,10 +3007,12 @@ function renderBasket() {
   const countEl = document.getElementById('basket-count-num');
   const clearBtn = document.getElementById('clear-basket-btn');
   const clusterBtn = document.getElementById('cluster-btn');
+  const exampleLink = document.getElementById('load-example-link');
 
   countEl.textContent = basket.length;
   clearBtn.disabled = basket.length === 0;
   clusterBtn.disabled = basket.length === 0;
+  if (exampleLink) exampleLink.style.display = basket.length === 0 ? '' : 'none';
 
   if (basket.length === 0) {
     tbody.innerHTML = '<tr><td colspan="5" style="color:#888;font-style:italic">No sequences added yet.</td></tr>';
@@ -3031,6 +3037,32 @@ function renderBasket() {
 
 function escapeHtml(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// ================================================================
+// EXAMPLE CSV DATA
+// ================================================================
+
+const EXAMPLE_CSV = `name,vh_sequence,vl_sequence
+PA13P1H08,QVQLVNSGGGVVQPGRSLRLSCVASGFTFSTFGIHWVRQAPGKGLEWVAVISNDGEKSESADSVKGRFTPSRDNSKNTVYLQMNNLRVEDTAVYYCAKVLDYSRYSYYYGMDVWGQGTTVIVSS,EIVLTQSPGTLSLSPGGRGTLSCRTSQTINNAHLAWYQHKPGQAPRLLIYGSSERATGVPDRFSGSGSGSDFTLTISSLEAEDFAVYYCQHYGRSPPYTFGPGTKLDIK
+PA13P1E10,QVQLVDSGGGVVQPGKSLRLSCVGSGFTFRTFGIHWVRQAPGKGLEWVAVISNDGGNSASADSVKGRFTTSRDNSKNTVYLQINSLRPEDTAIYYCAKVLDYSAFSYYYGMDVWGQGTTVIVSS,EIVLTQSPGTLSLSPGERGTLSCRTSQPISRAHLAWYQHKAGQAPRLLIYGSTERAAGIPERFSGGGSGSDFTLTISSLEAEDFAVYYCQHYGRSPPYTFGQGTKVEIK
+PA12P1C07,QVQLEESGGGVVQPGKSLRLSCVASAFTFKRFAMHWVRQAPGKGLEWVAVISDNGLREDYEDSVKGRFTISRDNSKDTLYLQMNSLRPEDTAIYYCAKVLDYSEYSLYFGMDVWGQGTTVLVSS,EIVLTQSPAILSLSPGDRATLSCRTSQTVNSNFLAWYQQKPGQAPRLLIYGASRRAIDIPDRFTGSGSGTEFTLTIARLEPEDFAVYSCQHYSDSPPYTFGQGTKLEIK
+PA12P3F10,QVQLVESGGGVVQPGGSLTLSCVGSGFTFSHYAIHWVRQAPGKGLEWVAVISNVGTTRDYADSLKGRLTISRENSQSTVFLQMNSLRADDTAIYYCAKVLDYSEFHYYYGLDVWGQGTAVAVSS,EIVLTQSPGTLSLSPGQRVTLSCRVSQAIPTMYVAWYQQRPGQAPRLLIYGTSSRATGIPDRFSGGGSGTDFTLTINRLEPEDIAVYYCQHYSNSPPYTFGPGTKLEIK
+Ixekizumab,QVQLVQSGAEVKKPGSSVKVSCKASGYSFTDYHIHWVRQAPGQGLEWMGVINPMYGTTDYNQRFKGRVTITADESTSTAYMELSSLRSEDTAVYYCARYDYFTGTGVYWGQGTLVTVSS,DIVMTQTPLSLSVTPGQPASISCRSSRSLVHSRGNTYLHWYLQKPGQSPQLLIYKVSNRFIGVPDRFSGSGSGTDFTLKISRVEAEDVGVYYCSQSTHLPFTFGQGTKLEIK
+Obinutuzumab,QVQLVQSGAEVKKPGSSVKVSCKASGYAFSYSWINWVRQAPGQGLEWMGRIFPGDGDTDYNGKFKGRVTITADKSTSTAYMELSSLRSEDTAVYYCARNVFDGYWLVYWGQGTLVTVSS,DIVMTQTPLSLPVTPGEPASISCRSSKSLLHSNGITYLYWYLQKPGQSPQLLIYQMSNLVSGVPDRFSGSGSGTDFTLKISRVEAEDVGVYYCAQNLELPYTFGGGTKVEIK
+Vedolizumab,QVQLVQSGAEVKKPGASVKVSCKGSGYTFTSYWMHWVRQAPGQRLEWIGEIDPSESNTNYNQKFKGRVTLTVDISASTAYMELSSLRSEDTAVYYCARGGYDGWDYAIDYWGQGTLVTVSS,VMTQSPLSLPVTPGEPASISCRSSQSLAKSYGNTYLSWYLQKPGQSPQLLIYGISNRFSGVPDRFSGSGSGTDFTLKISRVEAEDVGVYYCLQGTHQPYTFGQGTKVEIK
+`;
+
+function loadExampleCSV() {
+  const count = loadCSVToBasket(EXAMPLE_CSV);
+  const statusEl = document.getElementById('csv-status');
+  if (statusEl) {
+    if (count > 0) {
+      statusEl.textContent = count + ' example sequence(s) loaded.';
+    } else {
+      statusEl.textContent = 'Failed to load example.';
+    }
+  }
 }
 
 // ================================================================
