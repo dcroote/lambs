@@ -573,6 +573,7 @@ h1 {
         <button id="analyze-btn">Analyze</button>
         <button id="add-to-basket-btn" class="btn btn-secondary">Add to Basket</button>
         <span id="basket-status" class="basket-status" style="display:none"></span>
+        <span id="load-example-single-link" style="font-size:0.85em;color:#888;display:none">(<a href="#" onclick="loadExampleSingle();return false;" style="color:#2266cc;text-decoration:underline;cursor:pointer">load an example set</a>)</span>
       </div>
     </div>
 
@@ -3966,17 +3967,27 @@ function switchTab(tabName) {
 // EVENT LISTENERS
 // ================================================================
 
-// Trastuzumab example sequences — shown until user focuses a field
+// Trastuzumab example sequences — optional via "load an example set"
 const DEMO_VH = `EVQLVESGGGLVQPGGSLRLSCAASGFNIKDTYIHWVRQAPGKGLEWVARIYPTNGYTRYADSVKGRFTISADTSKNTAYLQMNSLRAEDTAVYYCSRWGGDGFYAMDYWGQGTLVTVSSASTKGPSVFPLAPSSKSTSGGTAALGCLVKDYFPEPVTVSWNSGALTSGVHTFPAVLQSSGLYSLSSVVTVPSSSLGTQTYICNVNHKPSNTKVDKKVEPKSCDKTHTCPPCPAPELLGGPSVFLFPPKPKDTLMISRTPEVTCVVVDVSHEDPEVKFNWYVDGVEVHNAKTKPREEQYNSTYRVVSVLTVLHQDWLNGKEYKCKVSNKALPAPIEKTISKAKGQPREPQVYTLPPSREEMTKNQVSLTCLVKGFYPSDIAVEWESNGQPENNYKTTPPVLDSDGSFFLYSKLTVDKSRWQQGNVFSCSVMHEALHNHYTQKSLSLSPG`;
 const DEMO_VL = `DIQMTQSPSSLSASVGDRVTITCRASQDVNTAVAWYQQKPGKAPKLLIYSASFLYSGVPSRFSGSRSGTDFTLTISSLQPEDFATYYCQQHYTTPPTFGQGTKVEIKRTVAAPSVFIFPPSDEQLKSGTASVVCLLNNFYPREAKVQWKVDNALQSGNSQESVTEQDSKDSTYSLSSTLTLSKADYEKHKVYACEVTHQGLSSPVTKSFNRGEC`;
 
-function seedDemoTextareas() {
+function updateSingleExampleLinkVisibility() {
+  const link = document.getElementById('load-example-single-link');
+  const vh = document.getElementById('vh-input');
+  const vl = document.getElementById('vl-input');
+  if (!link || !vh || !vl) return;
+  const empty = !vh.value.trim() && !vl.value.trim();
+  link.style.display = empty ? '' : 'none';
+}
+
+function loadExampleSingle() {
   const vh = document.getElementById('vh-input');
   const vl = document.getElementById('vl-input');
   vh.value = DEMO_VH;
   vl.value = DEMO_VL;
   vh.dataset.demoPlaceholder = '1';
   vl.dataset.demoPlaceholder = '1';
+  updateSingleExampleLinkVisibility();
 }
 
 document.getElementById('analyze-btn').addEventListener('click', analyze);
@@ -4048,10 +4059,12 @@ document.getElementById('cluster-threshold').addEventListener('change', runMulti
 
 // Allow Ctrl+Enter to trigger analysis from textareas
 document.querySelectorAll('#vh-input, #vl-input').forEach(function(ta) {
+  ta.addEventListener('input', updateSingleExampleLinkVisibility);
   ta.addEventListener('focus', function () {
     if (this.dataset.demoPlaceholder === '1') {
       this.value = '';
       delete this.dataset.demoPlaceholder;
+      updateSingleExampleLinkVisibility();
     }
   });
   ta.addEventListener('keydown', function (e) {
@@ -4062,7 +4075,7 @@ document.querySelectorAll('#vh-input, #vl-input').forEach(function(ta) {
   });
 });
 
-seedDemoTextareas();
+updateSingleExampleLinkVisibility();
 renderBasket();
 refreshMsaLiabilityOptionsUI();
 </script>
