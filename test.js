@@ -63,6 +63,11 @@ const wrappedJS = `
   exports.calcGRAVY = calcGRAVY;
   exports.computeSequenceProperties = computeSequenceProperties;
   exports.calcPercentile = calcPercentile;
+  exports.alignConstantRegion = alignConstantRegion;
+  exports.findConstantRegion = findConstantRegion;
+  exports.CONST_REGION_DB = CONST_REGION_DB;
+  exports.EXAMPLE_CSV = EXAMPLE_CSV;
+  exports.csvChainColumnIndices = csvChainColumnIndices;
 })(this);
 `;
 const ctx = {};
@@ -101,6 +106,11 @@ const {
   calcGRAVY,
   computeSequenceProperties,
   calcPercentile,
+  alignConstantRegion,
+  findConstantRegion,
+  CONST_REGION_DB,
+  EXAMPLE_CSV,
+  csvChainColumnIndices,
 } = ctx;
 
 // --- Test harness ---
@@ -485,7 +495,7 @@ assert(csv1.length === 3, "parseCSV: 3 rows (header + 2 data)");
 assert(csv1[0][0] === "a" && csv1[0][2] === "c", "parseCSV: header parsed");
 assert(csv1[1][1] === "2", "parseCSV: data cell correct");
 
-const csv2 = parseCSV('name,vh\n"Seq, 1","ABC"\n');
+const csv2 = parseCSV('name,heavy\n"Seq, 1","ABC"\n');
 assert(csv2[1][0] === "Seq, 1", "parseCSV: quoted field with comma");
 assert(csv2[1][1] === "ABC", "parseCSV: quoted field value");
 
@@ -498,6 +508,46 @@ assert(csv4[1][0] === 'he said "hi"', "parseCSV: escaped double quotes");
 
 const csvEmpty = parseCSV("");
 assert(csvEmpty.length === 0, "parseCSV: empty string returns no rows");
+
+// ============================================================
+// CSV import: heavy and light column names
+// ============================================================
+section("CSV import: heavy and light columns");
+
+function normHeaders(cells) {
+  return cells.map((h) => h.trim().toLowerCase());
+}
+
+let cci = csvChainColumnIndices(normHeaders(["Name", "Heavy", "Light"]));
+assert(
+  cci.nameCol === 0 && cci.heavyCol === 1 && cci.lightCol === 2,
+  "csvChainColumnIndices: Name, Heavy, Light in default order",
+);
+
+cci = csvChainColumnIndices(normHeaders(["light", "Name", "heavy"]));
+assert(
+  cci.lightCol === 0 && cci.nameCol === 1 && cci.heavyCol === 2,
+  "csvChainColumnIndices: any column order",
+);
+
+const exHdr = normHeaders(parseCSV(EXAMPLE_CSV)[0]);
+cci = csvChainColumnIndices(exHdr);
+assert(
+  cci.heavyCol >= 0 &&
+    cci.lightCol >= 0 &&
+    exHdr[cci.heavyCol] === "heavy" &&
+    exHdr[cci.lightCol] === "light",
+  "EXAMPLE_CSV first row must use literal column names heavy and light",
+);
+
+const miniCsv = parseCSV("name,heavy,light\nmAb1,QVQLVES,DIQLTQS\n");
+cci = csvChainColumnIndices(normHeaders(miniCsv[0]));
+const heavyFromCsv = cleanSequence(miniCsv[1][cci.heavyCol]);
+const lightFromCsv = cleanSequence(miniCsv[1][cci.lightCol]);
+assert(
+  heavyFromCsv === "QVQLVES" && lightFromCsv === "DIQLTQS",
+  "data cells map to heavy and light columns by name",
+);
 
 // ============================================================
 // globalAlign (full Needleman-Wunsch)
@@ -565,6 +615,23 @@ const pi4 = pairwiseIdentity(
   { vh: "ABCDEF", vl: "" },
 );
 assert(pi4 === 1.0, "pairwiseIdentity: VH-only identical = 1.0");
+
+const piStrip1 = pairwiseIdentity(
+  {
+    vh:
+      "EVQLVESGGGLVQPGGSLRLSCAASGFTFSSYGMHWVRQAPGKGLEWVAVIWYDGSNKYYADSVKGRFTISRDNSKNTLYLQMNSLRAEDTAVYYCAR" +
+      CONST_REGION_DB.human.CH["IGHG1"].s,
+    vl: "",
+  },
+  {
+    vh: "EVQLVESGGGLVQPGGSLRLSCAASGFTFSSYGMHWVRQAPGKGLEWVAVIWYDGSNKYYADSVKGRFTISRDNSKNTLYLQMNSLRAEDTAVYYCAR",
+    vl: "",
+  },
+);
+assert(
+  piStrip1 === 1.0,
+  "pairwiseIdentity: VH+CH vs VH-only (same variable) = 1.0 after constant strip",
+);
 
 // ============================================================
 // clusterSequences
@@ -2498,7 +2565,10 @@ assert(
 assertApprox(calcPI(""), 5.55, 1e-9, "calcPI empty");
 assertApprox(calcPI("DDDD"), 2.905316029395059, 1e-6, "calcPI acidic peptide");
 assertApprox(calcPI("KKKK"), 11.007689786103274, 1e-6, "calcPI basic peptide");
-assert(calcPI("DDDD") < 7 && calcPI("KKKK") > 7, "calcPI ordering acidic vs basic");
+assert(
+  calcPI("DDDD") < 7 && calcPI("KKKK") > 7,
+  "calcPI ordering acidic vs basic",
+);
 
 // computeSequenceProperties: same outputs as individual calcs (Trastuzumab VH)
 const TRAST_VH =
@@ -2506,7 +2576,12 @@ const TRAST_VH =
 const trastP = computeSequenceProperties(TRAST_VH);
 assert(trastP.length === 120, "computeSequenceProperties length");
 assertApprox(trastP.mw, 13162.6699, 0.01, "computeSequenceProperties mw");
-assertApprox(trastP.pI, 8.471027635356105, 1e-6, "computeSequenceProperties pI");
+assertApprox(
+  trastP.pI,
+  8.471027635356105,
+  1e-6,
+  "computeSequenceProperties pI",
+);
 assertApprox(
   trastP.charge74,
   0.8192512928888138,
@@ -2519,12 +2594,7 @@ assertApprox(
   1e-9,
   "computeSequenceProperties charge55",
 );
-assertApprox(
-  trastP.gravy,
-  -0.305,
-  1e-9,
-  "computeSequenceProperties gravy",
-);
+assertApprox(trastP.gravy, -0.305, 1e-9, "computeSequenceProperties gravy");
 const trastParts = {
   length: TRAST_VH.length,
   mw: calcMW(TRAST_VH),
@@ -2539,7 +2609,10 @@ assert(
 );
 
 // Percentiles used in properties table (reference distribution is sorted)
-assert(calcPercentile([], 0) === null, "calcPercentile empty distribution → null");
+assert(
+  calcPercentile([], 0) === null,
+  "calcPercentile empty distribution → null",
+);
 assert(calcPercentile([1, 2, 3, 4, 5], 3) === 40, "calcPercentile mid value");
 assert(calcPercentile([1, 2, 3, 4, 5], 5) === 80, "calcPercentile at max");
 assert(calcPercentile([1, 2, 3, 4, 5], 1) === 0, "calcPercentile at min");
@@ -2569,6 +2642,162 @@ for (const tc of cdr3TestCases) {
   }
 }
 
+// ============================================================
+// alignConstantRegion
+// ============================================================
+section("alignConstantRegion");
+
+// Perfect match: reference is the last 6 residues of the query
+const ACR_QUERY = "EVQLVESGGGLVQPGGSLRLSCAASGFTFS" + "CCCFFF";
+const ACR_REF = "CCCFFF";
+const acrResult = alignConstantRegion(ACR_QUERY, ACR_REF);
+assert(acrResult !== null, "alignConstantRegion: returns a result");
+assert(
+  acrResult.splitPos === 30,
+  `alignConstantRegion: splitPos=${acrResult.splitPos}, expected 30`,
+);
+assert(
+  acrResult.identity === 1.0,
+  `alignConstantRegion: identity=${acrResult.identity}, expected 1.0 (perfect match)`,
+);
+assert(
+  acrResult.matches === 6 && acrResult.total === 6,
+  `alignConstantRegion: matches=${acrResult.matches}/total=${acrResult.total}, expected 6/6`,
+);
+assert(
+  acrResult.aligned1.startsWith("CCCFFF"),
+  "alignConstantRegion: aligned query region starts with constant sequence",
+);
+assert(
+  acrResult.aligned2.startsWith("CCCFFF"),
+  "alignConstantRegion: aligned reference region starts with constant sequence",
+);
+
+// One mismatch in the constant region
+const ACR_QUERY2 = "EVQLVESGGGLVQPGGSLRLSCAASGFTFS" + "CCCGFF";
+const acrResult2 = alignConstantRegion(ACR_QUERY2, ACR_REF);
+assert(
+  acrResult2 !== null,
+  "alignConstantRegion (1 mismatch): returns a result",
+);
+assert(
+  acrResult2.splitPos === 30,
+  `alignConstantRegion (1 mismatch): splitPos=${acrResult2.splitPos}, expected 30`,
+);
+assertApprox(
+  acrResult2.identity,
+  5 / 6,
+  0.001,
+  "alignConstantRegion (1 mismatch): identity ~= 5/6",
+);
+
+// Reference longer than any suffix: no plausible alignment
+const acrShort = alignConstantRegion("AAAA", "CCCCCCCCCCCCCCCC");
+assert(
+  acrShort !== null,
+  "alignConstantRegion with short query: returns a result object (low identity expected)",
+);
+assert(
+  acrShort.identity < 0.5,
+  "alignConstantRegion with incompatible sequences: identity < 0.5",
+);
+
+// Null returned for empty reference
+assert(
+  alignConstantRegion("EVQLVES", "") === null,
+  "alignConstantRegion: null for empty reference",
+);
+
+// ============================================================
+// findConstantRegion
+// ============================================================
+section("findConstantRegion");
+
+// Shared ~97 AA VH-only prefix (no constant region)
+const TEST_VAR_REGION =
+  "EVQLVESGGGLVQPGGSLRLSCAASGFTFSSYGMHWVRQAPGKGLEWVAVIWYDGSNKYYADSVKGRFTISRDNSKNTLYLQMNSLRAEDTAVYYCAR";
+
+// Sequences shorter than 150 AA always return null
+const SHORT_SEQ =
+  "EVQLVESGGGLVQPGGSLRLSCAASGFTFSSYGMHWVRQAPGKGLEWVAVIWYDGSNKYYADSVKGRFTISRDNSKNTLYLQMNSLRAEDTAVYYCAR";
+assert(
+  SHORT_SEQ.length < 150,
+  "findConstantRegion test setup: short V-only sequence is < 150 AA",
+);
+assert(
+  findConstantRegion(SHORT_SEQ) === null,
+  "findConstantRegion: returns null for sequence shorter than 150 AA",
+);
+
+// Long VH + CH-like tail with unknown edits: alignments to full-length DB references
+// stay below the identity threshold.
+const LONG_SEQ_NO_MATCH =
+  TEST_VAR_REGION +
+  "ASTKGPSVFPLAPSSKSTSGGTAALGCLVKDYFPEPVTVSWNSGALTSGVHTFPAVLQSSGLYSLSSVVTVPSSSLGTQTYICNVNHKPSNTKVDKRV";
+assert(
+  LONG_SEQ_NO_MATCH.length >= 150,
+  "findConstantRegion test setup: long sequence is >= 150 AA",
+);
+assert(
+  findConstantRegion(LONG_SEQ_NO_MATCH) === null,
+  "findConstantRegion: returns null when constant segment does not align above threshold",
+);
+
+// Query: VH + human IGHG1 CH exactly as in CONST_REGION_DB (index.html)
+const HUMAN_IGHG1_CH = CONST_REGION_DB.human.CH["IGHG1"].s;
+const TEST_FULL_SEQ = TEST_VAR_REGION + HUMAN_IGHG1_CH;
+const fcrResult = findConstantRegion(TEST_FULL_SEQ);
+assert(
+  fcrResult !== null,
+  "findConstantRegion: detects human IGHG1 constant region from CONST_REGION_DB",
+);
+assert(
+  fcrResult !== null && fcrResult.isotype === "IGHG1",
+  `findConstantRegion: identifies isotype as IGHG1, got ${fcrResult && fcrResult.isotype}`,
+);
+assert(
+  fcrResult !== null && fcrResult.species === "human",
+  `findConstantRegion: identifies species as human, got ${fcrResult && fcrResult.species}`,
+);
+assert(
+  fcrResult !== null && fcrResult.regionKind === "CH",
+  `findConstantRegion: regionKind CH, got ${fcrResult && fcrResult.regionKind}`,
+);
+assert(
+  fcrResult !== null && fcrResult.identity >= 0.99,
+  `findConstantRegion: identity >= 0.99, got ${fcrResult && fcrResult.identity}`,
+);
+assert(
+  fcrResult !== null && fcrResult.splitPos === TEST_VAR_REGION.length,
+  `findConstantRegion: splitPos=${fcrResult && fcrResult.splitPos}, expected ${TEST_VAR_REGION.length}`,
+);
+
+// Variable region isolated correctly
+const varOnly = TEST_FULL_SEQ.substring(0, fcrResult ? fcrResult.splitPos : 0);
+assert(
+  varOnly === TEST_VAR_REGION,
+  "findConstantRegion: splitPos correctly isolates the variable region",
+);
+
+// VH + CL sequence still matches
+const HUMAN_IGKC_CL = CONST_REGION_DB.human.CL["IGKC"].s;
+const TEST_FULL_MANGLED_SEQ_IGKC = TEST_VAR_REGION + HUMAN_IGKC_CL;
+const fcrResultIGKC = findConstantRegion(TEST_FULL_MANGLED_SEQ_IGKC);
+assert(
+  fcrResultIGKC !== null && fcrResultIGKC.isotype === "IGKC",
+  `findConstantRegion: identifies isotype as IGKC, got ${fcrResultIGKC && fcrResultIGKC.isotype}`,
+);
+assert(
+  fcrResultIGKC !== null && fcrResultIGKC.species === "human",
+  `findConstantRegion: identifies species as human, got ${fcrResultIGKC && fcrResultIGKC.species}`,
+);
+
+// Truncated constant tail: not enough overlap with full-length references
+const truncatedCHPrefix = HUMAN_IGHG1_CH.slice(0, 100);
+assert(
+  findConstantRegion(TEST_VAR_REGION + truncatedCHPrefix) === null,
+  "findConstantRegion: returns null when only a short CH prefix is present",
+);
 // ============================================================
 // Summary
 // ============================================================

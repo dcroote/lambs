@@ -543,7 +543,7 @@ h1 {
 </head>
 <body>
 <div class="container">
-  <h1>mAb Variable Region Sequence Analysis</h1>
+  <h1>mAb Sequence Analysis</h1>
 
   <div class="tab-bar">
     <button class="tab-btn active" data-tab="single">Single mAb Analysis</button>
@@ -555,14 +555,14 @@ h1 {
     <div class="input-section">
       <div class="input-row">
         <div class="input-group">
-          <label for="vh-input">VH Sequence</label>
+          <label for="vh-input">VH / Heavy Chain Sequence</label>
           <p style="font-size:0.85em;color:#888">
             Supported formats: amino acid sequence or FASTA.
           </p>
           <textarea id="vh-input" rows="3" placeholder="Paste VH amino acid sequence (or FASTA)..."></textarea>
         </div>
         <div class="input-group">
-          <label for="vl-input">VL Sequence</label>
+          <label for="vl-input">VL / Light Chain Sequence</label>
           <p style="font-size:0.85em;color:#888">
             Supported formats: amino acid sequence or FASTA.
           </p>
@@ -637,12 +637,12 @@ h1 {
         <span id="load-example-link" style="font-size:0.85em;color:#888;display:none">(<a href="#" onclick="loadExampleCSV();return false;" style="color:#2266cc;text-decoration:underline;cursor:pointer">load an example set</a>)</span>
       </div>
       <p style="font-size:0.85em;color:#888">
-        CSV format expects 3 columns (case-insensitive, any order): <b>Name,VH,VL</b>
+        CSV format expects 3 columns (case-insensitive, any order): <b>Name, Heavy, Light</b> (full-length or Fv-only).
       </p>
       <div class="basket-table-wrap">
         <table class="basket-table">
           <thead>
-            <tr><th>#</th><th>Name</th><th>VH</th><th>VL</th><th></th></tr>
+            <tr><th>#</th><th>Name</th><th>Heavy</th><th>Light</th><th></th></tr>
           </thead>
           <tbody id="basket-tbody"></tbody>
         </table>
@@ -654,7 +654,7 @@ h1 {
     </div>
 
     <div class="cluster-controls">
-      <label for="cluster-threshold">Cluster identity threshold (%, combined VH and VL):</label>
+      <label for="cluster-threshold">Cluster identity threshold (%, combined heavy + light variable regions):</label>
       <input type="number" id="cluster-threshold" value="70" min="1" max="100" step="1">
       <button id="cluster-btn" class="btn btn-primary" disabled>Cluster &amp; Analyze</button>
     </div>
@@ -2117,6 +2117,52 @@ const V_GENE_DB = {
 };
 
 // ================================================================
+// CONSTANT REGION DATABASE
+//
+// Amino acid sequences for human and mouse CH and CL constant
+// regions used to detect and identify constant regions within
+// full-length VH+CH and VL+CL input sequences. Populate each
+// entry with the mature-protein constant-domain sequence (CH1
+// through CH3/CH4, or the single CL domain).
+// ================================================================
+const CONST_REGION_DB = {
+  human: {
+    CH: {
+      "IGHA1": { s: "ASPTSPKVFPLSLCSTQPDGNVVIACLVQGFFPQEPLSVTWSESGQGVTARNFPPSQDASGDLYTTSSQLTLPATQCLAGKSVTCHVKHYTNPSQDVTVPCPVPSTPPTPSPSTPPTPSPSCCHPRLSLHRPALEDLLLGSEANLTCTLTGLRDASGVTFTWTPSSGKSAVQGPPERDLCGCYSVSSVLPGCAEPWNHGKTFTCTAAYPESKTPLTATLSKSGNTFRPEVHLLPPPSEELALNELVTLTCLARGFSPKDVLVRWLQGSQELPREKYLTWASRQEPSQGTTTFAVTSILRVAAEDWKKGDTFSCMVGHEALPLAFTQKTIDRLAGKPTHVNVSVVMAEVDGTCY" },
+      "IGHA2": { s: "ASPTSPKVFPLSLDSTPQDGNVVVACLVQGFFPQEPLSVTWSESGQNVTARNFPPSQDASGDLYTTSSQLTLPATQCPDGKSVTCHVKHYTNPSQDVTVPCPVPPPPPCCHPRLSLHRPALEDLLLGSEANLTCTLTGLRDASGATFTWTPSSGKSAVQGPPERDLCGCYSVSSVLPGCAQPWNHGETFTCTAAHPELKTPLTANITKSGNTFRPEVHLLPPPSEELALNELVTLTCLARGFSPKDVLVRWLQGSQELPREKYLTWASRQEPSQGTTTFAVTSILRVAAEDWKKGDTFSCMVGHEALPLAFTQKTIDRLAGKPTHVNVSVVMAEVDGTCY" },
+      "IGHD": { s: "APTKAPDVFPIISGCRHPKDNSPVVLACLITGYHPTSVTVTWYMGTQSQPQRTFPEIQRRDSYYMTSSQLSTPLQQWRQGEYKCVVQHTASKSKKEIFRWPESPKAQASSVPTAQPQAEGSLAKATTAPATTRNTGRGGEEKKKEKEKEEQEERETKTPECPSHTQPLGVYLLTPAVQDLWLRDKATFTCFVVGSDLKDAHLTWEVAGKVPTGGVEEGLLERHSNGSQSQHSRLTLPRSLWNAGTSVTCTLNHPSLPPQRLMALREPAAQAPVKLSLNLLASSDPPEAASWLLCEVSGFSPPNILLMWLEDQREVNTSGFAPARPPPQPRSTTFWAWSVLRVPAPPSPQPATYTCVVSHEDSRTLLNASRSLEVSYVTDHGPMK" },
+      "IGHE": { s: "ASTQSPSVFPLTRCCKNIPSNATSVTLGCLATGYFPEPVMVTCDTGSLNGTTMTLPATTLTLSGHYATISLLTVSGAWAKQMFTCRVAHTPSSTDWVDNKTFSVCSRDFTPPTVKILQSSCDGGGHFPPTIQLLCLVSGYTPGTINITWLEDGQVMDVDLSTASTTQEGELASTQSELTLSQKHWLSDRTYTCQVTYQGHTFEDSTKKCADSNPRGVSAYLSRPSPFDLFIRKSPTITCLVVDLAPSKGTVNLTWSRASGKPVNHSTRKEEKQRNGTLTVTSTLPVGTRDWIEGETYQCRVTHPHLPRALMRSTTKTSGPRAAPEVYAFATPEWPGSRDKRTLACLIQNFMPEDISVQWLHNEVQLPDARHSTTQPRKTKGSGFFVFSRLEVTRAEWEQKDEFICRAVHEAASPSQTVQRAVSVNPGK" },
+      "IGHG1": { s: "ASTKGPSVFPLAPSSKSTSGGTAALGCLVKDYFPEPVTVSWNSGALTSGVHTFPAVLQSSGLYSLSSVVTVPSSSLGTQTYICNVNHKPSNTKVDKKVEPKSCDKTHTCPPCPAPELLGGPSVFLFPPKPKDTLMISRTPEVTCVVVDVSHEDPEVKFNWYVDGVEVHNAKTKPREEQYNSTYRVVSVLTVLHQDWLNGKEYKCKVSNKALPAPIEKTISKAKGQPREPQVYTLPPSRDELTKNQVSLTCLVKGFYPSDIAVEWESNGQPENNYKTTPPVLDSDGSFFLYSKLTVDKSRWQQGNVFSCSVMHEALHNHYTQKSLSLSPGK" },
+      "IGHG2": { s: "ASTKGPSVFPLAPCSRSTSESTAALGCLVKDYFPEPVTVSWNSGALTSGVHTFPAVLQSSGLYSLSSVVTVPSSNFGTQTYTCNVDHKPSNTKVDKTVERKCCVECPPCPAPPVAGPSVFLFPPKPKDTLMISRTPEVTCVVVDVSHEDPEVQFNWYVDGVEVHNAKTKPREEQFNSTFRVVSVLTVVHQDWLNGKEYKCKVSNKGLPAPIEKTISKTKGQPREPQVYTLPPSREEMTKNQVSLTCLVKGFYPSDIAVEWESNGQPENNYKTTPPMLDSDGSFFLYSKLTVDKSRWQQGNVFSCSVMHEALHNHYTQKSLSLSPGK" },
+      "IGHG3": { s: "ASTKGPSVFPLAPCSRSTSGGTAALGCLVKDYFPEPVTVSWNSGALTSGVHTFPAVLQSSGLYSLSSVVTVPSSSLGTQTYTCNVNHKPSNTKVDKRVELKTPLGDTTHTCPRCPEPKSCDTPPPCPRCPEPKSCDTPPPCPRCPEPKSCDTPPPCPRCPAPELLGGPSVFLFPPKPKDTLMISRTPEVTCVVVDVSHEDPEVQFKWYVDGVEVHNAKTKPREEQYNSTFRVVSVLTVLHQDWLNGKEYKCKVSNKALPAPIEKTISKTKGQPREPQVYTLPPSREEMTKNQVSLTCLVKGFYPSDIAVEWESSGQPENNYNTTPPMLDSDGSFFLYSKLTVDKSRWQQGNIFSCSVMHEALHNRFTQKSLSLSPGK" },
+      "IGHG4": { s: "ASTKGPSVFPLAPCSRSTSESTAALGCLVKDYFPEPVTVSWNSGALTSGVHTFPAVLQSSGLYSLSSVVTVPSSSLGTKTYTCNVDHKPSNTKVDKRVESKYGPPCPSCPAPEFLGGPSVFLFPPKPKDTLMISRTPEVTCVVVDVSQEDPEVQFNWYVDGVEVHNAKTKPREEQFNSTYRVVSVLTVLHQDWLNGKEYKCKVSNKGLPSSIEKTISKAKGQPREPQVYTLPPSQEEMTKNQVSLTCLVKGFYPSDIAVEWESNGQPENNYKTTPPVLDSDGSFFLYSRLTVDKSRWQEGNVFSCSVMHEALHNHYTQKSLSLSLGK" },
+      "IGHM": { s: "GSASAPTLFPLVSCENSPSDTSSVAVGCLAQDFLPDSITLSWKYKNNSDISSTRGFPSVLRGGKYAATSQVLLPSKDVMQGTDEHVVCKVQHPNGNKEKNVPLPVIAELPPKVSVFVPPRDGFFGNPRKSKLICQATGFSPRQIQVSWLREGKQVGSGVTTDQVQAEAKESGPTTYKVTSTLTIKESDWLGQSMFTCRVDHRGLTFQQNASSMCVPDQDTAIRVFAIPPSFASIFLTKSTKLTCLVTDLTTYDSVTISWTRQNGEAVKTHTNISESHPNATFSAVGEASICEDDWNSGERFTCTVTHTDLPSPLKQTISRPKGVALHRPDVYLLPPAREQLNLRESATITCLVTGFSPADVFVQWMQRGQPLSPEKYVTSAPMPEPQAPGRYFAHSILTVSEEEWNTGETYTCVAHEALPNRVTERTVDKSTGKPTLYNVSLVMSDTAGTCY" },
+    },
+    CL: {
+
+      "IGKC":  { s: "RTVAAPSVFIFPPSDEQLKSGTASVVCLLNNFYPREAKVQWKVDNALQSGNSQESVTEQDSKDSTYSLSSTLTLSKADYEKHKVYACEVTHQGLSSPVTKSFNRGEC" },
+      "IGLC2": { s: "GQPKAAPSVTLFPPSSEELQANKATLVCLISDFYPGAVTVAWKADSSPVKAGVETTTPSKQSNNKYAASSYLSLTPEQWKSHRSYSCQVTHEGSTVEKTVAPTECS" },
+    },
+  },
+  mouse: {
+    CH: {
+      "IGHA": { s: "ESARNPTIYPLTLPPVLCSDPVIIGCLIHDYFPFGTMNVTWGKSGKDITTVNFPPALASGGRYTMSSQLTLPAVECPEGESVKCSVQHDSNPVQELDVNCSGPTPPPPITIPSCQPSLSLQRPALEDLLLGSDASITCTLNGLRNPEGAAFTWEPSTGKDAVQKKAAQNSCGCYSVSSVLPGCAERWNSGASFKCTVTHPESGTLTGTIAKVTVNTFPPQVHLLPPPSEELALNELLSLTCLVRAFNPKEVLVRWLHGNEELSPESYLVFEPLKEPGEGATTYLVTSVLRVSAETWKQGDQYSCMVGHEALPMNFTQKTIDRLSGKPTNVSVSVIMSEGDGICY" },
+      "IGHD": { s: "GDKKEPDMFLLSECKAPEENEKINLGCLVIGSQPLKISWEPKKSSIVEHVFPSEMRNGNYTMVLQVTVLASELNLNHTCTINKPKRKEKPFKFPESWDSQSSKRVTPTLQAKNHSTEATKAITTKKDIEGAMAPSNLTVNILTTSTHPEMSSWLLCEVSGFFPENIHLMWLGVHSKMKSTNFVTANPTAQPGGTFQTWSVLRLPVALSSSLDTYTCVVEHEASKTKLNASKSLAISGCYHLLPESDGPSRRPDGPALA" },
+      "IGHE": { s: "ASIRNPQLYPLKPCKGTASMTLGCLVKDYFPNPVTVTWYSDSLNMSTVNFPALGSELKVTTSQVTSWGKSAKNFTCHVTHPPSFNESRTILVRPVNITEPTLELLHSSCDPNAFHSTIQLYCFIYGHILNDVSVSWLMDDREITDTLAQTVLIKEEGKLASTCSKLNITEQQWMSESTFTCKVTSQGVDYLAHTRRCPDHEPRGVITYLIPPSPLDLYQNGAPKLTCLVVDLESEKNVNVTWNQEKKTSVSASQWYTKHHNNATTSITSILPVVAKDWIEGYGYQCIVDHPDFPKPIVRSITKTPGQRSAPEVYVFPPPEEESEDKRTLTCLIQNFFPEDISVQWLGDGKLISNSQHSTTTPLKSNGSNQGFFIFSRLEVAKTLWTQRKQFTCQVIHEALQKPRKLEKTISTSLGNTSLRPS" },
+      "IGHG1": { s: "AKTTPPSVYPLAPGSAAQTNSMVTLGCLVKGYFPEPVTVTWNSGSLSSGVHTFPAVLESDLYTLSSSVTVPSSPRPSETVTCNVAHPASSTKVDKKIVPRDCGCKPCICTVPEVSSVFIFPPKPKDVLTITLTPKVTCVVVDISKDDPEVQFSWFVDDVEVHTAQTQPREEQFNSTFRSVSELPIMHQDWLNGKEFKCRVNSAAFPAPIEKTISKTKGRPKAPQVYTIPPPKEQMAKDKVSLTCMITDFFPEDITVEWQWNGQPAENYKNTQPIMNTNGSYFVYSKLNVQKSNWEAGNTFTCSVLHEGLHNHHTEKSLSHSPGK" },
+      "IGHG2A": { s: "AKTTAPSVYPLAPVCGDTTGSSVTLGCLVKGYFPEPVTLTWNSGSLSSGVHTFPAVLQSDLYTLSSSVTVTSSTWPSQSITCNVAHPASSTKVDKKIEPRGPTIKPCPPCKCPAPNLLGGPSVFIFPPKIKDVLMISLSPIVTCVVVDVSEDDPDVQISWFVNNVEVHTAQTQTHREDYNSTLRVVSALPIQHQDWMSGKEFKCKVNNKDLPAPIERTISKPKGSVRAPQVYVLPPPEEEMTKKQVTLTCMVTDFMPEDIYVEWTNNGKTELNYKNTEPVLDSDGSYFMYSKLRVEKKNWVERNSYSCSVVHEGLHNHHTTKSFSRTPGK" },
+      "IGHG2B": { s: "AKTTPPSVYPLAPGCGDTTGSSVTSGCLVKGYFPEPVTVTWNSGSLSSSVHTFPALLQSGLYTMSSSVTVPSSTWPSQTVTCSVAHPASSTTVDKKLEPSGPISTINPCPPCKECHKCPAPNLEGGPSVFIFPPNIKDVLMISLTPKVTCVVVDVSEDDPDVQISWFVNNVEVHTAQTQTHREDYNSTIRVVSTLPIQHQDWMSGKEFKCKVNNKDLPSPIERTISKIKGLVRAPQVYTLPPPAEQLSRKDVSLTCLVVGFNPGDISVEWTSNGHTEENYKDTAPVLDSDGSYFIYSKLNMKTSKWEKTDSFSCNVRHEGLKNYYLKKTISRSPGK" },
+      "IGHG2C": { s: "AKTTAPSVYPLAPVCGGTTGSSVTLGCLVKGYFPEPVTLTWNSGSLSSGVHTFPALLQSGLYTLSSSVTVTSNTWPSQTITCNVAHPASSTKVDKKIEPRVPITQNPCPPLKECPPCAAPDLLGGPSVFIFPPKIKDVLMISLSPMVTCVVVDVSEDDPDVQISWFVNNVEVHTAQTQTHREDYNSTLRVVSALPIQHQDWMSGKEFKCKVNNRALPSPIEKTISKPRGPVRAPQVYVLPPPAEEMTKKEFSLTCMITGFLPAEIAVDWTSNGRTEQNYKNTATVLDSDGSYFMYSKLRVQKSTWERGSLFACSVVHEVLHNHLTTKTISRSLGK" },
+      "IGHM": { s: "ESQSFPNVFPLVSCESPLSDKNLVAMGCLARDFLPSTISFTWNYQNNTEVIQGIRTFPTLRTGGKYLATSQVLLSPKSILEGSDEYLVCKIHYGGKNRDLHVPIPAVAEMNPNVNVFVPPRDGFSGPAPRKSKLICEATNFTPKPITVSWLKDGKLVESGFTTDPVTIENKGSTPQTYKVISTLTISEIDWLNLNVYTCRVDHRGLTFLKNVSSTCAASPSTDILTFTIPPSFADIFLSKSANLTCLVSNLATYETLNISWASQSGEPLETKIKIMESHPNGTFSAKGVASVCVEDWNNRKEFVCTVTHRDLPSPQKKFISKPNEVHKHPPAVYLLPPAREQLNLRESATVTCLVKGFSPADISVQWLQRGQLLPQEKYVTSAPMPEPGAPGFYFTHSILTVTEEEWNSGETYTCVVGHEALPHLVTERTVDKSTGKPTLYNVSLIMSDTGGTCY" },
+    },
+    CL: {
+      "IGKC": { s: "RADAAPTVSIFPPSSEQLTSGGASVVCFLNNFYPKDINVKWKIDGSERQNGVLNSWTDQDSKDSTYSMSSTLTLTKDEYERHNSYTCEATHKTSTSPIVKSFNRNEC" },
+      "IGLC1": { s: "GQPKSSPSVTLFPPSSEELETNKATLVCTITDFYPGVVTVDWKVDGTPVTQGMETTQPSKQSNNKYMASSYLTLTARAWERHSSYSCQVTHEGHTVEKSLSRADCS" },
+    },
+  },
+};
+
+// ================================================================
 // AMINO ACID PROPERTY MAP
 // ================================================================
 const AA_PROPERTY = {};
@@ -2463,6 +2509,132 @@ function findClosestGermline(seq, chainType) {
                    matches: result.matches, total: result.total,
                    aligned1: result.aligned1, aligned2: result.aligned2,
                    cdr1, cdr2 };
+        }
+      }
+    }
+  }
+  return best;
+}
+
+// ================================================================
+// CONSTANT REGION ALIGNMENT AND IDENTIFICATION
+// ================================================================
+// Semi-global alignment: the constant region reference must be
+// fully consumed; the query has a free prefix (variable region)
+// and a free suffix. Returns aligned strings, identity, match/
+// total counts, and splitPos (index in query where the constant
+// region alignment begins, i.e. end of variable region).
+function alignConstantRegion(query, constRef) {
+  const m = query.length, n = constRef.length;
+  if (n === 0) return null;
+  const MATCH = 1, MISMATCH = -1, GAP = -2;
+
+  const dp = [];
+  for (let i = 0; i <= m; i++) dp[i] = new Int32Array(n + 1);
+
+  // Free query prefix: no penalty for any amount of query before the alignment
+  for (let i = 0; i <= m; i++) dp[i][0] = 0;
+  // Penalize reference consumed without matching query (forces reference start)
+  for (let j = 1; j <= n; j++) dp[0][j] = j * GAP;
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const s = query[i - 1] === constRef[j - 1] ? MATCH : MISMATCH;
+      dp[i][j] = Math.max(
+        dp[i - 1][j - 1] + s,
+        dp[i - 1][j] + GAP,
+        dp[i][j - 1] + GAP
+      );
+    }
+  }
+
+  // Best score in last column: reference fully consumed, query may stop anywhere
+  let bestI = 0, bestScore = dp[0][n];
+  for (let i = 1; i <= m; i++) {
+    if (dp[i][n] > bestScore) { bestScore = dp[i][n]; bestI = i; }
+  }
+
+  // Traceback from (bestI, n); stops when j = 0
+  const c1 = [], c2 = [];
+  let i = bestI, j = n;
+  while (j > 0) {
+    if (i === 0) {
+      c1.push('-'); c2.push(constRef[j - 1]);
+      j--;
+      continue;
+    }
+    const s = query[i - 1] === constRef[j - 1] ? MATCH : MISMATCH;
+    if (dp[i][j] === dp[i - 1][j - 1] + s) {
+      c1.push(query[i - 1]); c2.push(constRef[j - 1]);
+      i--; j--;
+    } else if (dp[i][j] === dp[i - 1][j] + GAP) {
+      c1.push(query[i - 1]); c2.push('-');
+      i--;
+    } else {
+      c1.push('-'); c2.push(constRef[j - 1]);
+      j--;
+    }
+  }
+  const splitPos = i; // query[0..splitPos-1] is the variable region
+  c1.reverse(); c2.reverse();
+
+  // Identity over the aligned region only
+  let matches = 0, total = 0;
+  for (let k = 0; k < c1.length; k++) {
+    if (c1[k] !== '-' || c2[k] !== '-') {
+      total++;
+      if (c1[k] === c2[k]) matches++;
+    }
+  }
+
+  // Append any free query suffix (after bestI) with gaps in the reference row
+  for (let k = bestI; k < m; k++) {
+    c1.push(query[k]);
+    c2.push('-');
+  }
+
+  return {
+    aligned1: c1.join(''), aligned2: c2.join(''),
+    splitPos,
+    identity: total > 0 ? matches / total : 0,
+    matches, total
+  };
+}
+
+// Searches CONST_REGION_DB across both species and both CH and CL tables for
+// the best-matching constant region. The returned object includes regionKind
+// 'CH' or 'CL'. Returns null if no entry passes the identity threshold or the
+// sequence is too short to plausibly contain a constant region.
+function findConstantRegion(seq) {
+  const MIN_SEQ_LEN = 150; // V regions alone are ~95-130 AA
+  if (seq.length < MIN_SEQ_LEN) return null;
+
+  const IDENTITY_THRESHOLD = 0.70;
+  const MIN_SPLIT_POS = 80; // V region must be at least 80 AA before constant starts
+  let best = null;
+
+  for (const species of ['human', 'mouse']) {
+    for (const regionKind of ['CH', 'CL']) {
+      const entries = CONST_REGION_DB[species]?.[regionKind];
+      if (!entries) continue;
+      for (const [isotype, entry] of Object.entries(entries)) {
+        const refSeq = entry.s;
+        if (!refSeq || refSeq.length === 0) continue;
+        const result = alignConstantRegion(seq, refSeq);
+        if (!result) continue;
+        if (result.splitPos < MIN_SPLIT_POS) continue;
+        if (result.identity >= IDENTITY_THRESHOLD) {
+          if (!best || result.identity > best.identity) {
+            best = {
+              isotype, species, regionKind,
+              identity: result.identity,
+              matches: result.matches,
+              total: result.total,
+              aligned1: result.aligned1,
+              aligned2: result.aligned2,
+              splitPos: result.splitPos
+            };
+          }
         }
       }
     }
@@ -2929,6 +3101,38 @@ function renderChainPanel(seq, chainType) {
     '</div>';
 }
 
+function renderConstantRegionPanel(constMatch, chainLabel) {
+  const lbl = 'alignment-label';
+  const alen = constMatch.aligned1.length;
+  const colSpec = { type: 'aligned', alen };
+  const speciesLabel = constMatch.species.charAt(0).toUpperCase() + constMatch.species.slice(1);
+  const pct = (constMatch.identity * 100).toFixed(1);
+
+  let html = '<div class="chain-panel"><h2>' + chainLabel + ' Chain Analysis</h2>';
+
+  html += '<div class="germline-info">Isotype: <strong>' + constMatch.isotype +
+    '</strong> | Species: <strong>' + speciesLabel +
+    '</strong> | Identity: <strong>' + pct + '%</strong> (' +
+    constMatch.matches + '/' + constMatch.total + ' positions)</div>';
+
+  html += '<div class="section-title">Reference Alignment</div>';
+  html += '<div class="track-block">';
+
+  html += renderRulerRow(alen, lbl);
+  html += renderGermlineGeneRowHtml(lbl, { gene: constMatch.isotype }, constMatch.aligned2, colSpec);
+  html += renderGermlineMismatchRowHtml(lbl, constMatch.aligned1, constMatch.aligned2, colSpec);
+
+  let sRow = '<div class="track-row"><span class="track-label ' + lbl + '">Sequence:</span>';
+  for (let k = 0; k < alen; k++) {
+    sRow += constMatch.aligned1[k] === '-' ? '<span class="seq-char">-</span>' : seqCharSpan(constMatch.aligned1[k]);
+  }
+  html += sRow + '</div>';
+
+  html += '</div>';
+  html += '</div>';
+  return html;
+}
+
 // ================================================================
 // MAIN ANALYSIS
 // ================================================================
@@ -2960,8 +3164,18 @@ function analyze() {
   }
 
   let html = '';
-  if (vhSeq) html += renderChainPanel(vhSeq, 'VH');
-  if (vlSeq) html += renderChainPanel(vlSeq, 'VL');
+  if (vhSeq) {
+    const vhConst = findConstantRegion(vhSeq);
+    const vhVar = vhConst ? vhSeq.substring(0, vhConst.splitPos) : vhSeq;
+    html += renderChainPanel(vhVar || vhSeq, 'VH');
+    if (vhConst) html += renderConstantRegionPanel(vhConst, vhConst.regionKind);
+  }
+  if (vlSeq) {
+    const vlConst = findConstantRegion(vlSeq);
+    const vlVar = vlConst ? vlSeq.substring(0, vlConst.splitPos) : vlSeq;
+    html += renderChainPanel(vlVar || vlSeq, 'VL');
+    if (vlConst) html += renderConstantRegionPanel(vlConst, vlConst.regionKind);
+  }
 
   const resultsEl = document.getElementById('results');
   resultsEl.innerHTML = html;
@@ -3043,14 +3257,11 @@ function escapeHtml(str) {
 // EXAMPLE CSV DATA
 // ================================================================
 
-const EXAMPLE_CSV = `name,vh_sequence,vl_sequence
-PA13P1H08,QVQLVNSGGGVVQPGRSLRLSCVASGFTFSTFGIHWVRQAPGKGLEWVAVISNDGEKSESADSVKGRFTPSRDNSKNTVYLQMNNLRVEDTAVYYCAKVLDYSRYSYYYGMDVWGQGTTVIVSS,EIVLTQSPGTLSLSPGGRGTLSCRTSQTINNAHLAWYQHKPGQAPRLLIYGSSERATGVPDRFSGSGSGSDFTLTISSLEAEDFAVYYCQHYGRSPPYTFGPGTKLDIK
-PA13P1E10,QVQLVDSGGGVVQPGKSLRLSCVGSGFTFRTFGIHWVRQAPGKGLEWVAVISNDGGNSASADSVKGRFTTSRDNSKNTVYLQINSLRPEDTAIYYCAKVLDYSAFSYYYGMDVWGQGTTVIVSS,EIVLTQSPGTLSLSPGERGTLSCRTSQPISRAHLAWYQHKAGQAPRLLIYGSTERAAGIPERFSGGGSGSDFTLTISSLEAEDFAVYYCQHYGRSPPYTFGQGTKVEIK
-PA12P1C07,QVQLEESGGGVVQPGKSLRLSCVASAFTFKRFAMHWVRQAPGKGLEWVAVISDNGLREDYEDSVKGRFTISRDNSKDTLYLQMNSLRPEDTAIYYCAKVLDYSEYSLYFGMDVWGQGTTVLVSS,EIVLTQSPAILSLSPGDRATLSCRTSQTVNSNFLAWYQQKPGQAPRLLIYGASRRAIDIPDRFTGSGSGTEFTLTIARLEPEDFAVYSCQHYSDSPPYTFGQGTKLEIK
-PA12P3F10,QVQLVESGGGVVQPGGSLTLSCVGSGFTFSHYAIHWVRQAPGKGLEWVAVISNVGTTRDYADSLKGRLTISRENSQSTVFLQMNSLRADDTAIYYCAKVLDYSEFHYYYGLDVWGQGTAVAVSS,EIVLTQSPGTLSLSPGQRVTLSCRVSQAIPTMYVAWYQQRPGQAPRLLIYGTSSRATGIPDRFSGGGSGTDFTLTINRLEPEDIAVYYCQHYSNSPPYTFGPGTKLEIK
-Ixekizumab,QVQLVQSGAEVKKPGSSVKVSCKASGYSFTDYHIHWVRQAPGQGLEWMGVINPMYGTTDYNQRFKGRVTITADESTSTAYMELSSLRSEDTAVYYCARYDYFTGTGVYWGQGTLVTVSS,DIVMTQTPLSLSVTPGQPASISCRSSRSLVHSRGNTYLHWYLQKPGQSPQLLIYKVSNRFIGVPDRFSGSGSGTDFTLKISRVEAEDVGVYYCSQSTHLPFTFGQGTKLEIK
-Obinutuzumab,QVQLVQSGAEVKKPGSSVKVSCKASGYAFSYSWINWVRQAPGQGLEWMGRIFPGDGDTDYNGKFKGRVTITADKSTSTAYMELSSLRSEDTAVYYCARNVFDGYWLVYWGQGTLVTVSS,DIVMTQTPLSLPVTPGEPASISCRSSKSLLHSNGITYLYWYLQKPGQSPQLLIYQMSNLVSGVPDRFSGSGSGTDFTLKISRVEAEDVGVYYCAQNLELPYTFGGGTKVEIK
-Vedolizumab,QVQLVQSGAEVKKPGASVKVSCKGSGYTFTSYWMHWVRQAPGQRLEWIGEIDPSESNTNYNQKFKGRVTLTVDISASTAYMELSSLRSEDTAVYYCARGGYDGWDYAIDYWGQGTLVTVSS,VMTQSPLSLPVTPGEPASISCRSSQSLAKSYGNTYLSWYLQKPGQSPQLLIYGISNRFSGVPDRFSGSGSGTDFTLKISRVEAEDVGVYYCLQGTHQPYTFGQGTKVEIK
+const EXAMPLE_CSV = `name,heavy,light
+PA13P1H08,QVQLVNSGGGVVQPGRSLRLSCVASGFTFSTFGIHWVRQAPGKGLEWVAVISNDGEKSESADSVKGRFTPSRDNSKNTVYLQMNNLRVEDTAVYYCAKVLDYSRYSYYYGMDVWGQGTTVIVSSASTQSPSVFPLTRCCKNIPSNATSVTLGCLATGYFPEPVMVTCDTGSLNGTTMTLPATTLTLSGHYATISLLTVSGAWAKQMFTCRVAHTPSSTDWVDNKTFSVCSRDFTPPTVKILQSSCDGGGHFPPTIQLLCLVSGYTPGTINITWLEDGQVMDVDLSTASTTQEGELASTQSELTLSQKHWLSDRTYTCQVTYQGHTFEDSTKKCADSNPRGVSAYLSRPSPFDLFIRKSPTITCLVVDLAPSKGTVNLTWSRASGKPVNHSTRKEEKQRNGTLTVTSTLPVGTRDWIEGETYQCRVTHPHLPRALMRSTTKTSGPRAAPEVYAFATPEWPGSRDKRTLACLIQNFMPEDISVQWLHNEVQLPDARHSTTQPRKTKGSGFFVFSRLEVTRAEWEQKDEFICRAVHEAASPSQTVQRAVSVNPGK,EIVLTQSPGTLSLSPGGRGTLSCRTSQTINNAHLAWYQHKPGQAPRLLIYGSSERATGVPDRFSGSGSGSDFTLTISSLEAEDFAVYYCQHYGRSPPYTFGPGTKLDIKRTVAAPSVFIFPPSDEQLKSGTASVVCLLNNFYPREAKVQWKVDNALQSGNSQESVTEQDSKDSTYSLSSTLTLSKADYEKHKVYACEVTHQGLSSPVTKSFNRGEC
+PA13P1E10,QVQLVDSGGGVVQPGKSLRLSCVGSGFTFRTFGIHWVRQAPGKGLEWVAVISNDGGNSASADSVKGRFTTSRDNSKNTVYLQINSLRPEDTAIYYCAKVLDYSAFSYYYGMDVWGQGTTVIVSSASTQSPSVFPLTRCCKNIPSNATSVTLGCLATGYFPEPVMVTCDTGSLNGTTMTLPATTLTLSGHYATISLLTVSGAWAKQMFTCRVAHTPSSTDWVDNKTFSVCSRDFTPPTVKILQSSCDGGGHFPPTIQLLCLVSGYTPGTINITWLEDGQVMDVDLSTASTTQEGELASTQSELTLSQKHWLSDRTYTCQVTYQGHTFEDSTKKCADSNPRGVSAYLSRPSPFDLFIRKSPTITCLVVDLAPSKGTVNLTWSRASGKPVNHSTRKEEKQRNGTLTVTSTLPVGTRDWIEGETYQCRVTHPHLPRALMRSTTKTSGPRAAPEVYAFATPEWPGSRDKRTLACLIQNFMPEDISVQWLHNEVQLPDARHSTTQPRKTKGSGFFVFSRLEVTRAEWEQKDEFICRAVHEAASPSQTVQRAVSVNPGK,EIVLTQSPGTLSLSPGERGTLSCRTSQPISRAHLAWYQHKAGQAPRLLIYGSTERAAGIPERFSGGGSGSDFTLTISSLEAEDFAVYYCQHYGRSPPYTFGQGTKVEIKRTVAAPSVFIFPPSDEQLKSGTASVVCLLNNFYPREAKVQWKVDNALQSGNSQESVTEQDSKDSTYSLSSTLTLSKADYEKHKVYACEVTHQGLSSPVTKSFNRGEC
+PA12P1C07,QVQLEESGGGVVQPGKSLRLSCVASAFTFKRFAMHWVRQAPGKGLEWVAVISDNGLREDYEDSVKGRFTISRDNSKDTLYLQMNSLRPEDTAIYYCAKVLDYSEYSLYFGMDVWGQGTTVLVSSASTQSPSVFPLTRCCKNIPSNATSVTLGCLATGYFPEPVMVTCDTGSLNGTTMTLPATTLTLSGHYATISLLTVSGAWAKQMFTCRVAHTPSSTDWVDNKTFSVCSRDFTPPTVKILQSSCDGGGHFPPTIQLLCLVSGYTPGTINITWLEDGQVMDVDLSTASTTQEGELASTQSELTLSQKHWLSDRTYTCQVTYQGHTFEDSTKKCADSNPRGVSAYLSRPSPFDLFIRKSPTITCLVVDLAPSKGTVNLTWSRASGKPVNHSTRKEEKQRNGTLTVTSTLPVGTRDWIEGETYQCRVTHPHLPRALMRSTTKTSGPRAAPEVYAFATPEWPGSRDKRTLACLIQNFMPEDISVQWLHNEVQLPDARHSTTQPRKTKGSGFFVFSRLEVTRAEWEQKDEFICRAVHEAASPSQTVQRAVSVNPGK,EIVLTQSPAILSLSPGDRATLSCRTSQTVNSNFLAWYQQKPGQAPRLLIYGASRRAIDIPDRFTGSGSGTEFTLTIARLEPEDFAVYSCQHYSDSPPYTFGQGTKLEIKRTVAAPSVFIFPPSDEQLKSGTASVVCLLNNFYPREAKVQWKVDNALQSGNSQESVTEQDSKDSTYSLSSTLTLSKADYEKHKVYACEVTHQGLSSPVTKSFNRGEC
+PA12P3F10,QVQLVESGGGVVQPGGSLTLSCVGSGFTFSHYAIHWVRQAPGKGLEWVAVISNVGTTRDYADSLKGRLTISRENSQSTVFLQMNSLRADDTAIYYCAKVLDYSEFHYYYGLDVWGQGTAVAVSSASTQSPSVFPLTRCCKNIPSNATSVTLGCLATGYFPEPVMVTCDTGSLNGTTMTLPATTLTLSGHYATISLLTVSGAWAKQMFTCRVAHTPSSTDWVDNKTFSVCSRDFTPPTVKILQSSCDGGGHFPPTIQLLCLVSGYTPGTINITWLEDGQVMDVDLSTASTTQEGELASTQSELTLSQKHWLSDRTYTCQVTYQGHTFEDSTKKCADSNPRGVSAYLSRPSPFDLFIRKSPTITCLVVDLAPSKGTVNLTWSRASGKPVNHSTRKEEKQRNGTLTVTSTLPVGTRDWIEGETYQCRVTHPHLPRALMRSTTKTSGPRAAPEVYAFATPEWPGSRDKRTLACLIQNFMPEDISVQWLHNEVQLPDARHSTTQPRKTKGSGFFVFSRLEVTRAEWEQKDEFICRAVHEAASPSQTVQRAVSVNPGK,EIVLTQSPGTLSLSPGQRVTLSCRVSQAIPTMYVAWYQQRPGQAPRLLIYGTSSRATGIPDRFSGGGSGTDFTLTINRLEPEDIAVYYCQHYSNSPPYTFGPGTKLEIKRTVAAPSVFIFPPSDEQLKSGTASVVCLLNNFYPREAKVQWKVDNALQSGNSQESVTEQDSKDSTYSLSSTLTLSKADYEKHKVYACEVTHQGLSSPVTKSFNRGEC
 `;
 
 function loadExampleCSV() {
@@ -3116,28 +3327,35 @@ function parseCSV(text) {
   return rows;
 }
 
+// headers: trimmed, lowercased strings from the first CSV row
+function csvChainColumnIndices(headers) {
+  let heavyCol = -1, lightCol = -1, nameCol = -1;
+  for (let c = 0; c < headers.length; c++) {
+    const h = headers[c];
+    if (heavyCol === -1 && h.includes('heavy')) heavyCol = c;
+    if (lightCol === -1 && h.includes('light') && !h.includes('highlight')) lightCol = c;
+    if (nameCol === -1 && h.includes('name')) nameCol = c;
+  }
+  return { heavyCol, lightCol, nameCol };
+}
+
 function loadCSVToBasket(text) {
   const rows = parseCSV(text);
   if (rows.length < 2) return 0;
 
   const headers = rows[0].map(function(h) { return h.trim().toLowerCase(); });
-  let vhCol = -1, vlCol = -1, nameCol = -1;
-  for (let c = 0; c < headers.length; c++) {
-    if (vhCol === -1 && headers[c].includes('vh')) vhCol = c;
-    if (vlCol === -1 && headers[c].includes('vl')) vlCol = c;
-    if (nameCol === -1 && headers[c].includes('name')) nameCol = c;
-  }
+  const { heavyCol, lightCol, nameCol } = csvChainColumnIndices(headers);
 
-  if (vhCol === -1 && vlCol === -1) return -1;
+  if (heavyCol === -1 && lightCol === -1) return -1;
 
   let count = 0;
   for (let r = 1; r < rows.length; r++) {
     const row = rows[r];
-    const vh = vhCol >= 0 && row[vhCol] ? cleanSequence(row[vhCol]) : '';
-    const vl = vlCol >= 0 && row[vlCol] ? cleanSequence(row[vlCol]) : '';
-    if (!vh && !vl) continue;
+    const heavySeq = heavyCol >= 0 && row[heavyCol] ? cleanSequence(row[heavyCol]) : '';
+    const lightSeq = lightCol >= 0 && row[lightCol] ? cleanSequence(row[lightCol]) : '';
+    if (!heavySeq && !lightSeq) continue;
     const name = (nameCol >= 0 && row[nameCol]) ? row[nameCol].trim() : 'Seq ' + basketNextId;
-    addToBasket(name, vh, vl);
+    addToBasket(name, heavySeq, lightSeq);
     count++;
   }
   return count;
@@ -3203,9 +3421,25 @@ function globalAlign(seq1, seq2) {
   };
 }
 
+// Variable-region substring for multi-Ab clustering: removes detected constant
+// domains so pairwise identity reflects Fv similarity only.
+function variableRegionForClustering(seq) {
+  if (!seq) return '';
+  const cr = findConstantRegion(seq);
+  if (cr) return seq.substring(0, cr.splitPos);
+  return seq;
+}
+
+function clusterEntryVariableLength(entry) {
+  return variableRegionForClustering(entry.vh || '').length +
+    variableRegionForClustering(entry.vl || '').length;
+}
+
 function pairwiseIdentity(entry1, entry2) {
-  const s1 = (entry1.vh || '') + (entry1.vl || '');
-  const s2 = (entry2.vh || '') + (entry2.vl || '');
+  const s1 = variableRegionForClustering(entry1.vh || '') +
+    variableRegionForClustering(entry1.vl || '');
+  const s2 = variableRegionForClustering(entry2.vh || '') +
+    variableRegionForClustering(entry2.vl || '');
   if (!s1 || !s2) return 0;
   return globalAlign(s1, s2).identity;
 }
@@ -3217,8 +3451,7 @@ function pairwiseIdentity(entry1, entry2) {
 function clusterSequences(entries, threshold) {
   const frac = threshold / 100;
   const sorted = entries.slice().sort(function(a, b) {
-    return ((b.vh || '').length + (b.vl || '').length) -
-           ((a.vh || '').length + (a.vl || '').length);
+    return clusterEntryVariableLength(b) - clusterEntryVariableLength(a);
   });
 
   const clusters = [];
@@ -3569,17 +3802,20 @@ function renderMSARow(msaSeq, label, labelClass, highlightNames) {
 function renderChainMSA(members, chainKey, chainLabel, highlightNames) {
   const seqs = [];
   const names = [];
+  const chainType = chainLabel === 'VH' ? 'VH' : 'VL';
   for (let i = 0; i < members.length; i++) {
     const s = members[i][chainKey];
-    if (s) { seqs.push(s); names.push(members[i].name); }
+    if (s) {
+      const cr = findConstantRegion(s);
+      seqs.push(cr ? s.substring(0, cr.splitPos) : s);
+      names.push(members[i].name);
+    }
   }
   if (seqs.length === 0) return '';
 
   const lbl = 'msa-label';
   let html = '<div class="msa-section-title">' + chainLabel + ' Alignment</div>';
   html += '<div class="track-block">';
-
-  const chainType = chainLabel === 'VH' ? 'VH' : 'VL';
 
   if (seqs.length === 1) {
     const one = seqs[0];
@@ -3604,6 +3840,54 @@ function renderChainMSA(members, chainKey, chainLabel, highlightNames) {
   return html;
 }
 
+function constantRegionKindLabel(match) {
+  if (!match) return '--';
+  const speciesLabel = match.species.charAt(0).toUpperCase() + match.species.slice(1);
+  return escapeHtml(speciesLabel + ' ' + match.isotype);
+}
+
+function constantRegionIdentityLabel(match) {
+  if (!match) return '--';
+  const pct = (match.identity * 100).toFixed(1);
+  return pct + '% (' + match.matches + '/' + match.total + ' positions)';
+}
+
+function renderConstantRegionTableHtml(members) {
+  let anyFound = false;
+  const rows = members.map(function(m) {
+    const vhHit = m.vh ? findConstantRegion(m.vh) : null;
+    const vlHit = m.vl ? findConstantRegion(m.vl) : null;
+    const ch = vhHit && vhHit.regionKind === 'CH' ? vhHit : null;
+    const cl = vlHit && vlHit.regionKind === 'CL' ? vlHit : null;
+    if (ch || cl) anyFound = true;
+    return {
+      name: m.name,
+      chKind: constantRegionKindLabel(ch),
+      chIdent: constantRegionIdentityLabel(ch),
+      clKind: constantRegionKindLabel(cl),
+      clIdent: constantRegionIdentityLabel(cl),
+    };
+  });
+  if (!anyFound) return '';
+
+  let html = '<div class="msa-section-title">Constant Region</div>';
+  html += '<table class="props-table" style="margin:0 0 8px 0">';
+  html += '<thead><tr><th style="text-align:left">Name</th><th style="text-align:left">CH</th>' +
+    '<th style="text-align:left">CH identity</th><th style="text-align:left">CL</th>' +
+    '<th style="text-align:left">CL identity</th></tr></thead>';
+  html += '<tbody>';
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    html += '<tr><td style="vertical-align:top">' + escapeHtml(r.name) + '</td>' +
+      '<td style="vertical-align:top">' + r.chKind + '</td>' +
+      '<td style="vertical-align:top">' + r.chIdent + '</td>' +
+      '<td style="vertical-align:top">' + r.clKind + '</td>' +
+      '<td style="vertical-align:top">' + r.clIdent + '</td></tr>';
+  }
+  html += '</tbody></table>';
+  return html;
+}
+
 function renderClusterResults(clusters, highlightNames) {
   if (clusters.length === 0) return '<div class="no-data">No sequences to cluster.</div>';
 
@@ -3615,6 +3899,7 @@ function renderClusterResults(clusters, highlightNames) {
 
     html += renderChainMSA(cl.members, 'vh', 'VH', highlightNames);
     html += renderChainMSA(cl.members, 'vl', 'VL', highlightNames);
+    html += renderConstantRegionTableHtml(cl.members);
 
     html += '</div>';
   }
@@ -3682,8 +3967,8 @@ function switchTab(tabName) {
 // ================================================================
 
 // Trastuzumab example sequences — shown until user focuses a field
-const DEMO_VH = `EVQLVESGGGLVQPGGSLRLSCAASGFNIKDTYIHWVRQAPGKGLEWVARIYPTNGYTRYADSVKGRFTISADTSKNTAYLQMNSLRAEDTAVYYCSRWGGDGFYAMDYWGQGTLVTVSS`;
-const DEMO_VL = `DIQMTQSPSSLSASVGDRVTITCRASQDVNTAVAWYQQKPGKAPKLLIYSASFLYSGVPSRFSGSRSGTDFTLTISSLQPEDFATYYCQQHYTTPPTFGQGTKVEIK`;
+const DEMO_VH = `EVQLVESGGGLVQPGGSLRLSCAASGFNIKDTYIHWVRQAPGKGLEWVARIYPTNGYTRYADSVKGRFTISADTSKNTAYLQMNSLRAEDTAVYYCSRWGGDGFYAMDYWGQGTLVTVSSASTKGPSVFPLAPSSKSTSGGTAALGCLVKDYFPEPVTVSWNSGALTSGVHTFPAVLQSSGLYSLSSVVTVPSSSLGTQTYICNVNHKPSNTKVDKKVEPKSCDKTHTCPPCPAPELLGGPSVFLFPPKPKDTLMISRTPEVTCVVVDVSHEDPEVKFNWYVDGVEVHNAKTKPREEQYNSTYRVVSVLTVLHQDWLNGKEYKCKVSNKALPAPIEKTISKAKGQPREPQVYTLPPSREEMTKNQVSLTCLVKGFYPSDIAVEWESNGQPENNYKTTPPVLDSDGSFFLYSKLTVDKSRWQQGNVFSCSVMHEALHNHYTQKSLSLSPG`;
+const DEMO_VL = `DIQMTQSPSSLSASVGDRVTITCRASQDVNTAVAWYQQKPGKAPKLLIYSASFLYSGVPSRFSGSRSGTDFTLTISSLQPEDFATYYCQQHYTTPPTFGQGTKVEIKRTVAAPSVFIFPPSDEQLKSGTASVVCLLNNFYPREAKVQWKVDNALQSGNSQESVTEQDSKDSTYSLSSTLTLSKADYEKHKVYACEVTHQGLSSPVTKSFNRGEC`;
 
 function seedDemoTextareas() {
   const vh = document.getElementById('vh-input');
