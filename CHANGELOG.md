@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.6.0](https://github.com/dcroote/lambs/compare/v0.5.0...v0.6.0) (2026-04-02)
+
+
+### Features
+
+* add option to load example set for multiple mAb analysis ([16167f3](https://github.com/dcroote/lambs/commit/16167f396007e6ae43ff6d4a2556e4d0123e94a5))
+* detect and annotate constant regions ([e5ccbb0](https://github.com/dcroote/lambs/commit/e5ccbb0985dc59943a422a5dde4935e8737407c9))
+
+
+### Bug Fixes
+
+* add VH/VL properties feature to README ([fb34664](https://github.com/dcroote/lambs/commit/fb346645ec39c7d83eadfd344a8b0bff12802232))
+* replace single prepopulated inputs with option to load example set ([fd41d36](https://github.com/dcroote/lambs/commit/fd41d36e8a394b3ad7adf56a5077877ea68db4ad))
+* update README with screenshots for single and multiple mAb analysis ([7cbfeef](https://github.com/dcroote/lambs/commit/7cbfeef8f01a3e5848c5c9a3ea157ef730b0a2ae))
+
 ## [0.5.0](https://github.com/dcroote/lambs/compare/v0.4.0...v0.5.0) (2026-03-31)
 
 
