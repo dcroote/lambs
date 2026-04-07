@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.6.1](https://github.com/dcroote/lambs/compare/v0.6.0...v0.6.1) (2026-04-07)
+
+
+### Bug Fixes
+
+* add footer that includes release version ([6b2266a](https://github.com/dcroote/lambs/commit/6b2266a1467986adb4097a66ceb75fb41e6a4183))
+
 ## [0.6.0](https://github.com/dcroote/lambs/compare/v0.5.0...v0.6.0) (2026-04-02)
 
 
