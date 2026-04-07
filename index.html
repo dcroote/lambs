@@ -539,6 +539,26 @@ h1 {
   .basket-upload-row { flex-direction: column; align-items: flex-start; }
   .cluster-controls { flex-direction: column; align-items: flex-start; }
 }
+
+.site-footer {
+  max-width: 1400px;
+  margin: 32px auto 0;
+  padding: 16px 24px 24px;
+  font-size: 0.85em;
+  color: #666;
+  border-top: 1px solid #ddd;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.site-footer a {
+  color: #2266cc;
+  text-decoration: underline;
+}
+
+.site-footer a:hover {
+  color: #174a99;
+}
 </style>
 </head>
 <body>
@@ -667,6 +687,14 @@ h1 {
   </div>
 
 </div>
+
+<footer class="site-footer" role="contentinfo">
+  <p>
+    Release v<span id="lambs-app-version">0.6.0</span>
+    &middot; Licensed under Apache License 2.0
+    &middot; &copy; 2026 <a href="https://www.derekcroote.com/about/">Derek Croote</a>
+  </p>
+</footer>
 
 <script>
 // ================================================================

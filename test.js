@@ -9,8 +9,28 @@
 const fs = require("fs");
 const path = require("path");
 
-// --- Extract pure-logic JS from index.html (everything before DOM code) ---
+// --- Release footer must match package.json (commit-and-tag-version keeps them in sync) ---
 const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf-8");
+const pkg = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "package.json"), "utf-8")
+);
+const footerMatch = html.match(
+  /<span id="lambs-app-version">([^<]*)<\/span>/
+);
+if (!footerMatch) {
+  console.error('index.html: missing <span id="lambs-app-version">...</span>');
+  process.exit(1);
+}
+const footerVersion = footerMatch[1].trim();
+if (footerVersion !== pkg.version) {
+  console.error(
+    `Version mismatch: package.json "${pkg.version}" vs index.html footer "${footerVersion}". ` +
+      "Run npm run release (commit-and-tag-version) so both stay aligned."
+  );
+  process.exit(1);
+}
+
+// --- Extract pure-logic JS from index.html (everything before DOM code) ---
 const scriptMatch = html.match(/<script>([\s\S]*?)<\/script>/);
 if (!scriptMatch) {
   console.error("No <script> block found");

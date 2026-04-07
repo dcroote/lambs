@@ -9,3 +9,5 @@ __pycache__/
 *$py.class
 .venv/
 venv/
+
+node_modules/

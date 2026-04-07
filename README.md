@@ -54,6 +54,22 @@ python3 scripts/populate_germlines.py
 python3 scripts/compute_reference_stats.py
 ```
 
+### Releases and versioning
+
+The project uses [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version). The semver source of truth is **`package.json`**; each release bumps that version, updates the changelog, updates the footer in `index.html`, and creates a git tag.
+
+After installing dev dependencies:
+
+```
+pnpm install
+# for bug fixes and minor features
+pnpm release
+# for feature releases pre-v1.0
+pnpm release --release-as minor
+```
+
+**Note:** The footer always shows the **last released** version. If `main` has commits after that tag, the app may include newer code than that number indicates. For a published build, use the tagged release or run a new release when appropriate.
+
 ### Background: IgBLAST used to annotate CDRs
 
 This was run in a separate directory containing IgBLAST v1.22.0 and IMGT sequences. For mouse, `human` was replaced with `mouse` in all arguments. Assumes the database files (outputs of `makeblastdb`) were in the `db` directory. Assumes the auxiliary data is in the `optional_file` directory (standard, comes with IgBLAST).
