@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.7.0](https://github.com/dcroote/lambs/compare/v0.6.1...v0.7.0) (2026-04-19)
+
+
+### Features
+
+* add ability to collapse sections and cards ([706ae9e](https://github.com/dcroote/lambs/commit/706ae9eaeb0a158273d9f374b921953a2a0700e1))
+
 ## [0.6.1](https://github.com/dcroote/lambs/compare/v0.6.0...v0.6.1) (2026-04-07)
 
 
