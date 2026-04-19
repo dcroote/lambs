@@ -116,7 +116,7 @@ h1 {
   margin-bottom: 16px;
 }
 
-.chain-panel h2 {
+.chain-panel > summary.panel-summary {
   font-size: 1.2em;
   margin-bottom: 16px;
   color: #333;
@@ -132,7 +132,77 @@ h1 {
   padding-bottom: 3px;
 }
 
-.chain-panel .section-title:first-of-type { margin-top: 0; }
+details.collapsible-section {
+  margin-top: 32px;
+}
+
+.chain-panel > .collapsible-panel-body > details.collapsible-section:first-of-type,
+.cluster-panel > .collapsible-panel-body > details.collapsible-section:first-of-type {
+  margin-top: 0;
+}
+
+details.collapsible-panel {
+  display: block;
+}
+
+details.collapsible-panel > summary.panel-summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+details.collapsible-panel > summary.panel-summary::-webkit-details-marker {
+  display: none;
+}
+
+details.collapsible-panel > summary.panel-summary::before {
+  content: '\25b6\00a0';
+  display: inline-block;
+  font-size: 0.65em;
+  color: #666;
+  margin-right: 0.35em;
+  transform: rotate(0deg);
+  transition: transform 0.12s ease;
+}
+
+details.collapsible-panel[open] > summary.panel-summary::before {
+  transform: rotate(90deg);
+}
+
+.chain-panel:not([open]) > summary.panel-summary,
+.cluster-panel:not([open]) > summary.panel-summary {
+  margin-bottom: 0;
+}
+
+details.collapsible-section > summary.section-title {
+  margin-top: 0;
+  margin-bottom: 0;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+details.collapsible-section > summary.section-title::-webkit-details-marker {
+  display: none;
+}
+
+details.collapsible-section > summary.section-title::before {
+  content: '\25b6\00a0';
+  display: inline-block;
+  font-size: 0.65em;
+  color: #666;
+  margin-right: 0.35em;
+  transform: rotate(0deg);
+  transition: transform 0.12s ease;
+}
+
+details.collapsible-section[open] > summary.section-title::before {
+  transform: rotate(90deg);
+}
+
+details.collapsible-section > .collapsible-body {
+  padding-top: 6px;
+}
 
 .track-block {
   overflow-x: auto;
@@ -486,7 +556,7 @@ h1 {
   margin-bottom: 16px;
 }
 
-.cluster-panel h2 {
+.cluster-panel > summary.panel-summary {
   font-size: 1.2em;
   margin-bottom: 12px;
   color: #333;
@@ -500,6 +570,14 @@ h1 {
   margin: 32px 0 6px 0;
   border-bottom: 1px solid #eee;
   padding-bottom: 3px;
+}
+
+details.collapsible-section > summary.msa-section-title {
+  color: #555;
+}
+
+.cluster-panel > .collapsible-panel-body > details.collapsible-section ~ details.collapsible-section > summary.msa-section-title {
+  margin-top: 0;
 }
 
 .conservation-row {
@@ -2760,6 +2838,21 @@ function computeSequenceProperties(seq) {
 
 function formatNum(n, dec) { return n.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec }); }
 
+/** Wraps `bodyHtml` in a native `<details>` section with a titled summary. */
+function collapsibleSectionHtml(titleText, bodyHtml, open, variant) {
+  const o = open ? ' open' : '';
+  const sumClass = variant === 'msa' ? 'section-title msa-section-title' : 'section-title';
+  return '<details class="collapsible-section"' + o + '><summary class="' + sumClass + '">' +
+    escapeHtml(titleText) + '</summary><div class="collapsible-body">' + bodyHtml + '</div></details>';
+}
+
+/** Wraps panel content in `<details>` so the whole card (chain / cluster) can collapse. */
+function collapsiblePanelHtml(panelClass, titleText, bodyHtml, open) {
+  const o = open !== false ? ' open' : '';
+  return '<details class="' + panelClass + ' collapsible-panel"' + o + '><summary class="panel-summary">' +
+    escapeHtml(titleText) + '</summary><div class="collapsible-panel-body">' + bodyHtml + '</div></details>';
+}
+
 function renderPropertiesHtml(seq, chainType) {
   const p = computeSequenceProperties(seq);
   const ref = APPROVED_MAB_STATS[chainType] || null;
@@ -2776,42 +2869,42 @@ function renderPropertiesHtml(seq, chainType) {
     ['Hydrophobicity (GRAVY)', p.gravy,  formatNum(p.gravy, 3),          'gravy',    function(v) { return formatNum(v, 3); }]
   ];
 
-  let html = '<div class="section-title">Properties vs. N = ' + ref.n + ' Approved Therapeutic mAb ' + chainType + ' Sequences</div>';
-  html += '<table class="props-table">';
-  html += '<thead><tr>';
-  html += '<th>Property</th>';
-  html += '<th class="num">Value</th>';
+  const propsTitle = 'Properties vs. N = ' + ref.n + ' Approved Therapeutic mAb ' + chainType + ' Sequences';
+  let tableHtml = '<table class="props-table">';
+  tableHtml += '<thead><tr>';
+  tableHtml += '<th>Property</th>';
+  tableHtml += '<th class="num">Value</th>';
   if (ref) {
-    html += '<th class="num">Percentile</th>';
-    html += '<th class="num">Q1</th>';
-    html += '<th class="num">Q2</th>';
-    html += '<th class="num">Q3</th>';
+    tableHtml += '<th class="num">Percentile</th>';
+    tableHtml += '<th class="num">Q1</th>';
+    tableHtml += '<th class="num">Q2</th>';
+    tableHtml += '<th class="num">Q3</th>';
   }
-  html += '</tr></thead><tbody>';
+  tableHtml += '</tr></thead><tbody>';
 
   for (const [label, rawVal, fmtVal, refKey, refFmt] of rows) {
-    html += '<tr>';
-    html += '<td class="prop-label">' + label + '</td>';
+    tableHtml += '<tr>';
+    tableHtml += '<td class="prop-label">' + label + '</td>';
     if (ref && ref[refKey]) {
       const dist = ref[refKey];
       // Compare rawVal against dist.q1/q3 directly — both are in native units
       // (e.g. Da for MW), so no display-unit conversion is needed here.
       const inIqr = rawVal >= dist.q1 && rawVal <= dist.q3;
       const valClass = 'prop-value num ' + (inIqr ? 'prop-in-iqr' : 'prop-out-iqr');
-      html += '<td class="' + valClass + '">' + fmtVal + '</td>';
+      tableHtml += '<td class="' + valClass + '">' + fmtVal + '</td>';
       const pct = calcPercentile(dist.values, rawVal);
-      html += '<td class="prop-pct num">' + pct + '</td>';
-      html += '<td class="prop-iqr num">' + refFmt(dist.q1) + '</td>';
-      html += '<td class="prop-iqr num">' + refFmt(dist.q2) + '</td>';
-      html += '<td class="prop-iqr num">' + refFmt(dist.q3) + '</td>';
+      tableHtml += '<td class="prop-pct num">' + pct + '</td>';
+      tableHtml += '<td class="prop-iqr num">' + refFmt(dist.q1) + '</td>';
+      tableHtml += '<td class="prop-iqr num">' + refFmt(dist.q2) + '</td>';
+      tableHtml += '<td class="prop-iqr num">' + refFmt(dist.q3) + '</td>';
     } else {
-      html += '<td class="prop-value num">' + fmtVal + '</td>';
+      tableHtml += '<td class="prop-value num">' + fmtVal + '</td>';
     }
-    html += '</tr>';
+    tableHtml += '</tr>';
   }
 
-  html += '</tbody></table>';
-  return html;
+  tableHtml += '</tbody></table>';
+  return collapsibleSectionHtml(propsTitle, tableHtml, true);
 }
 
 // ================================================================
@@ -3065,69 +3158,69 @@ function renderGermlineAndLiabilitiesTrack(seq, chainType, lbl) {
 
   html += renderPropertiesHtml(seq, chainType);
 
-  html += '<div class="section-title">Germline Identification</div>';
+  let germBody = '';
   if (germ) {
-    html += renderGermlineInfoLineHtml(germ);
+    germBody += renderGermlineInfoLineHtml(germ);
   } else {
-    html += '<div class="no-data">No germline sequences loaded. Add IMGT sequences to V_GENE_DB in the source code.</div>';
+    germBody += '<div class="no-data">No germline sequences loaded. Add IMGT sequences to V_GENE_DB in the source code.</div>';
   }
+  html += collapsibleSectionHtml('Germline Identification', germBody, true);
 
-  html += '<div class="section-title">Sequence Liabilities</div>';
-  html += '<div class="track-block">';
+  let liabBody = '<div class="track-block">';
 
   if (germ) {
     const ctx = buildGermlineAlignmentContext(germ, cdr3);
     const colSpecAligned = { type: 'aligned', alen: ctx.alen };
 
-    html += renderRulerRow(ctx.alen, lbl);
+    liabBody += renderRulerRow(ctx.alen, lbl);
 
     if (germ.cdr1 || germ.cdr2 || cdr3) {
-      html += renderGermlineCdrRowsHtml(lbl, ctx.labelChars, ctx.pipeChars, colSpecAligned);
+      liabBody += renderGermlineCdrRowsHtml(lbl, ctx.labelChars, ctx.pipeChars, colSpecAligned);
     }
-    html += renderGermlineGeneRowHtml(lbl, germ, ctx.a2, colSpecAligned);
-    html += renderGermlineMismatchRowHtml(lbl, ctx.a1, ctx.a2, colSpecAligned);
+    liabBody += renderGermlineGeneRowHtml(lbl, germ, ctx.a2, colSpecAligned);
+    liabBody += renderGermlineMismatchRowHtml(lbl, ctx.a1, ctx.a2, colSpecAligned);
 
     let sRow = '<div class="track-row"><span class="track-label ' + lbl + '">Sequence:</span>';
     for (let i = 0; i < ctx.alen; i++) {
       sRow += ctx.a1[i] === '-' ? '<span class="seq-char">-</span>' : seqCharSpan(ctx.a1[i]);
     }
-    html += sRow + '</div>';
+    liabBody += sRow + '</div>';
 
     let anyLiability = false;
     for (const name of LIABILITY_ORDER) {
       if (liabilities[name]) {
         const mapped = liabilities[name].map(function(p) { return ctx.rawToAligned[p]; });
-        html += renderTrackRow(ctx.a1, name, mapped, lbl);
+        liabBody += renderTrackRow(ctx.a1, name, mapped, lbl);
         anyLiability = true;
       }
     }
     if (!anyLiability) {
-      html += '<div class="track-row" style="color:#888;margin-top:4px">No sequence liabilities detected.</div>';
+      liabBody += '<div class="track-row" style="color:#888;margin-top:4px">No sequence liabilities detected.</div>';
     }
   } else {
-    html += renderRulerRow(seq.length, lbl);
-    html += renderSequenceRow(seq, lbl);
+    liabBody += renderRulerRow(seq.length, lbl);
+    liabBody += renderSequenceRow(seq, lbl);
 
     let anyLiability = false;
     for (const name of LIABILITY_ORDER) {
       if (liabilities[name]) {
-        html += renderTrackRow(seq, name, liabilities[name], lbl);
+        liabBody += renderTrackRow(seq, name, liabilities[name], lbl);
         anyLiability = true;
       }
     }
     if (!anyLiability) {
-      html += '<div class="track-row" style="color:#888;margin-top:4px">No sequence liabilities detected.</div>';
+      liabBody += '<div class="track-row" style="color:#888;margin-top:4px">No sequence liabilities detected.</div>';
     }
   }
 
-  html += '</div>';
+  liabBody += '</div>';
+  html += collapsibleSectionHtml('Sequence Liabilities', liabBody, true);
   return html;
 }
 
 function renderChainPanel(seq, chainType) {
-  return '<div class="chain-panel"><h2>' + chainType + ' Chain Analysis</h2>' +
-    renderGermlineAndLiabilitiesTrack(seq, chainType, 'alignment-label') +
-    '</div>';
+  return collapsiblePanelHtml('chain-panel', chainType + ' Chain Analysis',
+    renderGermlineAndLiabilitiesTrack(seq, chainType, 'alignment-label'), true);
 }
 
 function renderConstantRegionPanel(constMatch, chainLabel) {
@@ -3137,29 +3230,26 @@ function renderConstantRegionPanel(constMatch, chainLabel) {
   const speciesLabel = constMatch.species.charAt(0).toUpperCase() + constMatch.species.slice(1);
   const pct = (constMatch.identity * 100).toFixed(1);
 
-  let html = '<div class="chain-panel"><h2>' + chainLabel + ' Chain Analysis</h2>';
-
-  html += '<div class="germline-info">Isotype: <strong>' + constMatch.isotype +
+  let inner = '<div class="germline-info">Isotype: <strong>' + constMatch.isotype +
     '</strong> | Species: <strong>' + speciesLabel +
     '</strong> | Identity: <strong>' + pct + '%</strong> (' +
     constMatch.matches + '/' + constMatch.total + ' positions)</div>';
 
-  html += '<div class="section-title">Reference Alignment</div>';
-  html += '<div class="track-block">';
+  let refBody = '<div class="track-block">';
 
-  html += renderRulerRow(alen, lbl);
-  html += renderGermlineGeneRowHtml(lbl, { gene: constMatch.isotype }, constMatch.aligned2, colSpec);
-  html += renderGermlineMismatchRowHtml(lbl, constMatch.aligned1, constMatch.aligned2, colSpec);
+  refBody += renderRulerRow(alen, lbl);
+  refBody += renderGermlineGeneRowHtml(lbl, { gene: constMatch.isotype }, constMatch.aligned2, colSpec);
+  refBody += renderGermlineMismatchRowHtml(lbl, constMatch.aligned1, constMatch.aligned2, colSpec);
 
   let sRow = '<div class="track-row"><span class="track-label ' + lbl + '">Sequence:</span>';
   for (let k = 0; k < alen; k++) {
     sRow += constMatch.aligned1[k] === '-' ? '<span class="seq-char">-</span>' : seqCharSpan(constMatch.aligned1[k]);
   }
-  html += sRow + '</div>';
+  refBody += sRow + '</div>';
 
-  html += '</div>';
-  html += '</div>';
-  return html;
+  refBody += '</div>';
+  inner += collapsibleSectionHtml('Reference Alignment', refBody, true);
+  return collapsiblePanelHtml('chain-panel', chainLabel + ' Chain Analysis', inner, true);
 }
 
 // ================================================================
@@ -3843,30 +3933,30 @@ function renderChainMSA(members, chainKey, chainLabel, highlightNames) {
   if (seqs.length === 0) return '';
 
   const lbl = 'msa-label';
-  let html = '<div class="msa-section-title">' + chainLabel + ' Alignment</div>';
-  html += '<div class="track-block">';
+  const alignTitle = chainLabel + ' Alignment';
+  let trackHtml = '<div class="track-block">';
 
   if (seqs.length === 1) {
     const one = seqs[0];
-    html += renderRulerRow(one.length, lbl);
-    html += renderGermlineMsaOverlayHtml(one, chainType, lbl);
-    html += renderMSARow(one, names[0], lbl, highlightNames);
+    trackHtml += renderRulerRow(one.length, lbl);
+    trackHtml += renderGermlineMsaOverlayHtml(one, chainType, lbl);
+    trackHtml += renderMSARow(one, names[0], lbl, highlightNames);
   } else {
     const msaSeqs = starMSA(seqs);
     const cons = computeConservation(msaSeqs);
 
-    html += renderRulerRow(msaSeqs[0].length, lbl);
-    html += renderGermlineMsaOverlayHtml(cons.consensus, chainType, lbl);
-    html += renderConsensusRow(cons.consensus, lbl);
-    html += renderConservationBars(cons.identity, lbl);
+    trackHtml += renderRulerRow(msaSeqs[0].length, lbl);
+    trackHtml += renderGermlineMsaOverlayHtml(cons.consensus, chainType, lbl);
+    trackHtml += renderConsensusRow(cons.consensus, lbl);
+    trackHtml += renderConservationBars(cons.identity, lbl);
     for (let i = 0; i < msaSeqs.length; i++) {
-      html += renderMSARow(msaSeqs[i], names[i], lbl, highlightNames);
+      trackHtml += renderMSARow(msaSeqs[i], names[i], lbl, highlightNames);
     }
   }
 
-  html += '</div>';
+  trackHtml += '</div>';
 
-  return html;
+  return collapsibleSectionHtml(alignTitle, trackHtml, true, 'msa');
 }
 
 function constantRegionKindLabel(match) {
@@ -3899,22 +3989,21 @@ function renderConstantRegionTableHtml(members) {
   });
   if (!anyFound) return '';
 
-  let html = '<div class="msa-section-title">Constant Region</div>';
-  html += '<table class="props-table" style="margin:0 0 8px 0">';
-  html += '<thead><tr><th style="text-align:left">Name</th><th style="text-align:left">CH</th>' +
+  let tableHtml = '<table class="props-table" style="margin:0 0 8px 0">';
+  tableHtml += '<thead><tr><th style="text-align:left">Name</th><th style="text-align:left">CH</th>' +
     '<th style="text-align:left">CH identity</th><th style="text-align:left">CL</th>' +
     '<th style="text-align:left">CL identity</th></tr></thead>';
-  html += '<tbody>';
+  tableHtml += '<tbody>';
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
-    html += '<tr><td style="vertical-align:top">' + escapeHtml(r.name) + '</td>' +
+    tableHtml += '<tr><td style="vertical-align:top">' + escapeHtml(r.name) + '</td>' +
       '<td style="vertical-align:top">' + r.chKind + '</td>' +
       '<td style="vertical-align:top">' + r.chIdent + '</td>' +
       '<td style="vertical-align:top">' + r.clKind + '</td>' +
       '<td style="vertical-align:top">' + r.clIdent + '</td></tr>';
   }
-  html += '</tbody></table>';
-  return html;
+  tableHtml += '</tbody></table>';
+  return collapsibleSectionHtml('Constant Region', tableHtml, true, 'msa');
 }
 
 function renderClusterResults(clusters, highlightNames) {
@@ -3923,14 +4012,12 @@ function renderClusterResults(clusters, highlightNames) {
   let html = '';
   for (let c = 0; c < clusters.length; c++) {
     const cl = clusters[c];
-    html += '<div class="cluster-panel">';
-    html += '<h2>Cluster ' + (c + 1) + ' (' + cl.members.length + ' sequence' + (cl.members.length > 1 ? 's' : '') + ')</h2>';
-
-    html += renderChainMSA(cl.members, 'vh', 'VH', highlightNames);
-    html += renderChainMSA(cl.members, 'vl', 'VL', highlightNames);
-    html += renderConstantRegionTableHtml(cl.members);
-
-    html += '</div>';
+    const clusterTitle = 'Cluster ' + (c + 1) + ' (' + cl.members.length + ' sequence' +
+      (cl.members.length > 1 ? 's' : '') + ')';
+    let clusterInner = renderChainMSA(cl.members, 'vh', 'VH', highlightNames);
+    clusterInner += renderChainMSA(cl.members, 'vl', 'VL', highlightNames);
+    clusterInner += renderConstantRegionTableHtml(cl.members);
+    html += collapsiblePanelHtml('cluster-panel', clusterTitle, clusterInner, true);
   }
   return html;
 }
