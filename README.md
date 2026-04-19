@@ -68,6 +68,13 @@ pnpm release
 pnpm release --release-as minor
 ```
 
+Adding release notes to the GitHub release (also remember to add `index.html` to the release assets):
+
+```
+awk '/^## \[/{if(found) exit; found=1; next} found' CHANGELOG.md > release_notes.md
+less release_notes.md
+```
+
 **Note:** The footer always shows the **last released** version. If `main` has commits after that tag, the app may include newer code than that number indicates. For a published build, use the tagged release or run a new release when appropriate.
 
 ### Background: IgBLAST used to annotate CDRs
