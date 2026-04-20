@@ -28,11 +28,11 @@ Code is open source, permissively licensed under Apache 2.0, and available at [h
 
 ## Screenshot - Single mAb Analysis
 
-<img src="screenshot_single_mab_analysis.png" alt="Screenshot of single mAb analysis" width="1200" height="1092">
+<img src="screenshot_single_mab_analysis.png" alt="Screenshot of single mAb analysis" width="1200" height="1022">
 
 ## Screenshot - Multiple mAb Analysis
 
-<img src="screenshot_multiple_mab_analysis.png" alt="Screenshot of multiple mAb analysis" width="1200" height="1172">
+<img src="screenshot_multiple_mab_analysis.png" alt="Screenshot of multiple mAb analysis" width="1200" height="1080">
 
 ## Developer notes
 
@@ -76,6 +76,15 @@ less release_notes.md
 ```
 
 **Note:** The footer always shows the **last released** version. If `main` has commits after that tag, the app may include newer code than that number indicates. For a published build, use the tagged release or run a new release when appropriate.
+
+### README screenshots
+
+Locally, after `pnpm install`, install Playwright’s Chromium build once. Whenever the UI changes, regenerate the PNGs (1200px wide, fixed viewport heights in `scripts/capture-readme-screenshots.mjs`) and the matching `height` attributes in this file:
+
+```
+pnpm exec playwright install chromium
+pnpm screenshots
+```
 
 ### Background: IgBLAST used to annotate CDRs
 

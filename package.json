@@ -3,9 +3,11 @@
   "version": "0.7.0",
   "description": "LAMBS - Local Analysis of mAb Sequences",
   "scripts": {
-    "release": "commit-and-tag-version --config ./scripts/version-updater/versionrc.cjs"
+    "release": "commit-and-tag-version --config ./scripts/version-updater/versionrc.cjs",
+    "screenshots": "node scripts/capture-readme-screenshots.mjs"
   },
   "devDependencies": {
-    "commit-and-tag-version": "^12.7.1"
+    "commit-and-tag-version": "^12.7.1",
+    "playwright": "^1.59.1"
   }
 }
