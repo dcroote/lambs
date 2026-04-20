@@ -95,7 +95,3 @@ This was run in a separate directory containing IgBLAST v1.22.0 and IMGT sequenc
     -query db/human_V.fasta \
     -out igblast_human_V.tsv
 ```
-
-### Background: Initial prompt and plan
-
-For those curious, see `.cursor/initial.prompt.md` and `.cursor/initial.plan.md` for the original prompt and plan, respectively.
