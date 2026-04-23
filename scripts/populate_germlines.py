@@ -2,7 +2,7 @@
 # /// script
 # requires-python = ">=3.10"
 # ///
-"""Parse germline FASTA & IgBLAST TSV files and inject V_GENE_DB into index.html.
+"""Parse germline FASTA & IgBLAST TSV files and inject V_GENE_DB and J_GENE_DB into index.html.
 
 Usage (from repository root):
     python scripts/populate_germlines.py
@@ -17,11 +17,12 @@ GERMLINES_DIR = ROOT / "germlines"
 HTML_FILE = ROOT / "index.html"
 
 SPECIES = ["human", "mouse"]
-GENES = ["ighv", "igkv", "iglv"]
+V_GENES = ["ighv", "igkv", "iglv"]
+J_GENES = ["ighj", "igkj", "iglj"]
 
 
 def parse_fasta(path: Path) -> dict[str, str]:
-    """Return {gene_name: sequence} from a FASTA file, skipping partial entries."""
+    """Return {gene_name: aa_sequence} from a FASTA file, skipping partial entries."""
     entries: dict[str, str] = {}
     current_name: str | None = None
     current_seq: list[str] = []
@@ -37,6 +38,47 @@ def parse_fasta(path: Path) -> dict[str, str]:
             fields = line[1:].split("|")
             current_name = fields[1] if len(fields) >= 2 else None
             current_seq = []
+        elif current_name is not None:
+            current_seq.append(line.strip())
+
+    if current_name is not None:
+        entries[current_name] = "".join(current_seq)
+
+    return entries
+
+
+def parse_j_fasta(path: Path) -> dict[str, str]:
+    """Return {gene_name: aa_sequence} from a J gene FASTA (amino acid sequences).
+
+    Only functional entries (F or (F)) are included; ORFs and pseudogenes are skipped.
+    Entries marked as partial in the header are also skipped.
+    """
+    entries: dict[str, str] = {}
+    current_name: str | None = None
+    current_seq: list[str] = []
+
+    for line in path.read_text().splitlines():
+        if line.startswith(">"):
+            if current_name is not None:
+                entries[current_name] = "".join(current_seq)
+
+            current_name = None
+            current_seq = []
+
+            if "partial" in line.lower():
+                continue
+
+            fields = line[1:].split("|")
+            if len(fields) < 2:
+                continue
+
+            # Field 3 (0-based): functionality — include only F and (F)
+            func = fields[3].strip() if len(fields) >= 4 else ""
+            if func not in ("F", "(F)"):
+                continue
+
+            current_name = fields[1]
+
         elif current_name is not None:
             current_seq.append(line.strip())
 
@@ -80,12 +122,12 @@ def parse_igblast_tsv(path: Path) -> dict[str, dict]:
     return cdr_data
 
 
-def build_js_object(db: dict, cdr_db: dict) -> str:
+def build_v_js_object(db: dict, cdr_db: dict) -> str:
     """Build the JS source for the V_GENE_DB constant."""
     lines = ["const V_GENE_DB = {"]
     for species in SPECIES:
         lines.append(f"  {species}: {{")
-        for gene in GENES:
+        for gene in V_GENES:
             gene_upper = gene.upper()
             entries = db.get(species, {}).get(gene_upper, {})
             lines.append(f"    {gene_upper}: {{")
@@ -102,19 +144,38 @@ def build_js_object(db: dict, cdr_db: dict) -> str:
     return "\n".join(lines)
 
 
-def main() -> None:
-    db: dict[str, dict[str, dict[str, str]]] = {}
-    total = 0
+def build_j_js_object(db: dict) -> str:
+    """Build the JS source for the J_GENE_DB constant."""
+    lines = ["const J_GENE_DB = {"]
     for species in SPECIES:
-        db[species] = {}
-        for gene in GENES:
+        lines.append(f"  {species}: {{")
+        for gene in J_GENES:
+            gene_upper = gene.upper()
+            entries = db.get(species, {}).get(gene_upper, {})
+            lines.append(f"    {gene_upper}: {{")
+            for name, seq in entries.items():
+                lines.append(f"      {json.dumps(name)}: {json.dumps({'s': seq})},")
+            lines.append("    },")
+        lines.append("  },")
+    lines.append("};")
+    return "\n".join(lines)
+
+
+def main() -> None:
+    # ── V genes ──────────────────────────────────────────────────────
+    v_db: dict[str, dict[str, dict[str, str]]] = {}
+    v_total = 0
+    print("V genes:")
+    for species in SPECIES:
+        v_db[species] = {}
+        for gene in V_GENES:
             fasta_path = GERMLINES_DIR / f"{species}-{gene}.fasta"
             entries = parse_fasta(fasta_path)
-            db[species][gene.upper()] = entries
-            total += len(entries)
+            v_db[species][gene.upper()] = entries
+            v_total += len(entries)
             print(f"  {fasta_path.name}: {len(entries)} sequences")
 
-    print(f"  Total: {total} sequences (partials excluded)")
+    print(f"  Total: {v_total} sequences (partials excluded)")
 
     cdr_db: dict[str, dict[str, dict]] = {}
     for species in SPECIES:
@@ -125,17 +186,34 @@ def main() -> None:
         else:
             cdr_db[species] = {}
 
+    # ── J genes ──────────────────────────────────────────────────────
+    j_db: dict[str, dict[str, dict[str, str]]] = {}
+    j_total = 0
+    print("J genes:")
+    for species in SPECIES:
+        j_db[species] = {}
+        for gene in J_GENES:
+            fasta_path = GERMLINES_DIR / f"{species}-{gene}.fasta"
+            entries = parse_j_fasta(fasta_path)
+            j_db[species][gene.upper()] = entries
+            j_total += len(entries)
+            print(f"  {fasta_path.name}: {len(entries)} sequences")
+
+    print(f"  Total: {j_total} sequences (ORFs/pseudogenes/partials excluded)")
+
+    # ── Inject into index.html ────────────────────────────────────────
     html = HTML_FILE.read_text()
 
-    pattern = re.compile(
-        r"const V_GENE_DB = \{.*?\n\};",
-        re.DOTALL,
-    )
-    if not pattern.search(html):
+    v_pattern = re.compile(r"const V_GENE_DB = \{.*?\n\};", re.DOTALL)
+    if not v_pattern.search(html):
         raise SystemExit("Could not locate V_GENE_DB block in index.html")
+    html = v_pattern.sub(build_v_js_object(v_db, cdr_db), html)
 
-    new_block = build_js_object(db, cdr_db)
-    html = pattern.sub(new_block, html)
+    j_pattern = re.compile(r"const J_GENE_DB = \{.*?\n\};", re.DOTALL)
+    if not j_pattern.search(html):
+        raise SystemExit("Could not locate J_GENE_DB block in index.html")
+    html = j_pattern.sub(build_j_js_object(j_db), html)
+
     HTML_FILE.write_text(html)
     print(f"  Updated {HTML_FILE}")
 

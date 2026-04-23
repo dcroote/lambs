@@ -28,11 +28,11 @@ Code is open source, permissively licensed under Apache 2.0, and available at [h
 
 ## Screenshot - Single mAb Analysis
 
-<img src="screenshot_single_mab_analysis.png" alt="Screenshot of single mAb analysis" width="1200" height="1022">
+<img src="screenshot_single_mab_analysis.png" alt="Screenshot of single mAb analysis" width="1200" height="1090">
 
 ## Screenshot - Multiple mAb Analysis
 
-<img src="screenshot_multiple_mab_analysis.png" alt="Screenshot of multiple mAb analysis" width="1200" height="1080">
+<img src="screenshot_multiple_mab_analysis.png" alt="Screenshot of multiple mAb analysis" width="1200" height="1130">
 
 ## Developer notes
 

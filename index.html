@@ -2224,6 +2224,79 @@ const V_GENE_DB = {
 };
 
 // ================================================================
+// J GENE DATABASE
+//
+// Amino acid sequences for human and mouse J genes (FR4 region)
+// from IMGT. The J gene comes after the CDR3 and before the
+// constant region. Populate each entry with the mature FR4
+// sequence for that allele.
+// Structure: { species: { family: { alleleName: { s: "seq" } } } }
+// ================================================================
+const J_GENE_DB = {
+  human: {
+    IGHJ: {
+      "IGHJ1*01": {"s": "AEYFQHWGQGTLVTVSS"},
+      "IGHJ2*01": {"s": "YWYFDLWGRGTLVTVSS"},
+      "IGHJ3*01": {"s": "DAFDVWGQGTMVTVSS"},
+      "IGHJ3*02": {"s": "DAFDIWGQGTMVTVSS"},
+      "IGHJ4*01": {"s": "YFDYWGQGTLVTVSS"},
+      "IGHJ4*02": {"s": "YFDYWGQGTLVTVSS"},
+      "IGHJ4*03": {"s": "YFDYWGQGTLVTVSS"},
+      "IGHJ5*01": {"s": "NWFDSWGQGTLVTVSS"},
+      "IGHJ5*02": {"s": "NWFDPWGQGTLVTVSS"},
+      "IGHJ5*04": {"s": "NWFDPWGQGTLVSVSS"},
+      "IGHJ6*01": {"s": "YYYYYGMDVWGQGTTVTVSS"},
+      "IGHJ6*02": {"s": "YYYYYGMDVWGQGTTVTVSS"},
+      "IGHJ6*03": {"s": "YYYYYYMDVWGKGTTVTVSS"},
+      "IGHJ6*04": {"s": "YYYYYGMDVWGKGTTVTVSS"},
+    },
+    IGKJ: {
+      "IGKJ1*01": {"s": "WTFGQGTKVEIK"},
+      "IGKJ2*01": {"s": "YTFGQGTKLEIK"},
+      "IGKJ2*02": {"s": "CTFGQGTKLEIK"},
+      "IGKJ2*03": {"s": "YSFGQGTKLEIK"},
+      "IGKJ2*04": {"s": "CSFGQGTKLEIK"},
+      "IGKJ3*01": {"s": "FTFGPGTKVDIK"},
+      "IGKJ4*01": {"s": "LTFGGGTKVEIK"},
+      "IGKJ4*02": {"s": "LTFGGGTKVEIK"},
+      "IGKJ5*01": {"s": "ITFGQGTRLEIK"},
+    },
+    IGLJ: {
+      "IGLJ1*01": {"s": "YVFGTGTKVTVL"},
+      "IGLJ2*01": {"s": "VVFGGGTKLTVL"},
+      "IGLJ2A*01": {"s": "CGIRRRDQADRP"},
+      "IGLJ3*01": {"s": "VVFGGGTKLTVL"},
+      "IGLJ3*02": {"s": "WVFGGGTKLTVL"},
+      "IGLJ6*01": {"s": "NVFGSGTKVTVL"},
+      "IGLJ7*01": {"s": "AVFGGGTQLTVL"},
+      "IGLJ7*02": {"s": "AVFGGGTQLTAL"},
+    },
+  },
+  mouse: {
+    IGHJ: {
+      "IGHJ1*01": {"s": "YWYFDVWGAGTTVTVSS"},
+      "IGHJ1*02": {"s": "YWYFDVWGAGTTVTVSS"},
+      "IGHJ1*03": {"s": "YWYFDVWGTGTTVTVSS"},
+      "IGHJ2*01": {"s": "YFDYWGQGTTLTVSS"},
+      "IGHJ2*02": {"s": "YFDYWGQGTSLTVSS"},
+      "IGHJ2*03": {"s": "YFDYWGQGTSLTVSS"},
+      "IGHJ3*01": {"s": "WFAYWGQGTLVTVSA"},
+      "IGHJ4*01": {"s": "YYAMDYWGQGTSVTVSS"},
+    },
+    IGKJ: {
+      "IGLJ1*01": {"s": "WVFGGGTKLTVL"},
+      "IGLJ2*01": {"s": "YVFGGGTKVTVL"},
+      "IGLJ3*01": {"s": "FIFGSGTKVTVL"},
+    },
+    IGLJ: {
+      "IGLJ1*01": {"s": "WVFGGGTKLTVL"},
+      "IGLJ2*01": {"s": "YVFGGGTKVTVL"},
+      "IGLJ3*01": {"s": "FIFGSGTKVTVL"},
+    },
+  },
+};
+
+// ================================================================
 // CONSTANT REGION DATABASE
 //
 // Amino acid sequences for human and mouse CH and CL constant
@@ -2616,6 +2689,126 @@ function findClosestGermline(seq, chainType) {
                    matches: result.matches, total: result.total,
                    aligned1: result.aligned1, aligned2: result.aligned2,
                    cdr1, cdr2 };
+        }
+      }
+    }
+  }
+  return best;
+}
+
+// ================================================================
+// J GENE ALIGNMENT AND IDENTIFICATION
+// ================================================================
+// Semi-global alignment: the J gene reference must be fully
+// consumed; the query has a free prefix (V+CDR3) and a free
+// suffix (constant region). Returns aligned strings, identity,
+// match/total counts, and splitPos (index in query where the J
+// gene alignment begins).
+function alignJGene(query, jRef) {
+  const m = query.length, n = jRef.length;
+  if (n === 0) return null;
+  const MATCH = 1, MISMATCH = -1, GAP = -2;
+
+  const dp = [];
+  for (let i = 0; i <= m; i++) dp[i] = new Int32Array(n + 1);
+
+  // Free query prefix: no penalty for query residues before the J gene
+  for (let i = 0; i <= m; i++) dp[i][0] = 0;
+  // Force reference to start from position 0
+  for (let j = 1; j <= n; j++) dp[0][j] = j * GAP;
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const s = query[i - 1] === jRef[j - 1] ? MATCH : MISMATCH;
+      dp[i][j] = Math.max(
+        dp[i - 1][j - 1] + s,
+        dp[i - 1][j] + GAP,
+        dp[i][j - 1] + GAP
+      );
+    }
+  }
+
+  // Best score in last column: reference fully consumed, query suffix is free
+  let bestI = 0, bestScore = dp[0][n];
+  for (let i = 1; i <= m; i++) {
+    if (dp[i][n] > bestScore) { bestScore = dp[i][n]; bestI = i; }
+  }
+
+  // Traceback from (bestI, n); stops when j = 0
+  const c1 = [], c2 = [];
+  let i = bestI, j = n;
+  while (j > 0) {
+    if (i === 0) {
+      c1.push('-'); c2.push(jRef[j - 1]);
+      j--;
+      continue;
+    }
+    const s = query[i - 1] === jRef[j - 1] ? MATCH : MISMATCH;
+    if (dp[i][j] === dp[i - 1][j - 1] + s) {
+      c1.push(query[i - 1]); c2.push(jRef[j - 1]);
+      i--; j--;
+    } else if (dp[i][j] === dp[i - 1][j] + GAP) {
+      c1.push(query[i - 1]); c2.push('-');
+      i--;
+    } else {
+      c1.push('-'); c2.push(jRef[j - 1]);
+      j--;
+    }
+  }
+  const splitPos = i; // query[0..splitPos-1] is the pre-J region
+  c1.reverse(); c2.reverse();
+
+  let matches = 0, total = 0;
+  for (let k = 0; k < c1.length; k++) {
+    if (c1[k] !== '-' || c2[k] !== '-') {
+      total++;
+      if (c1[k] === c2[k]) matches++;
+    }
+  }
+
+  // Append any free query suffix after bestI with gaps in reference row
+  for (let k = bestI; k < m; k++) {
+    c1.push(query[k]);
+    c2.push('-');
+  }
+
+  return {
+    aligned1: c1.join(''), aligned2: c2.join(''),
+    splitPos,
+    identity: total > 0 ? matches / total : 0,
+    matches, total
+  };
+}
+
+// Searches J_GENE_DB across both species for the best-matching J
+// gene for the given chain type. Returns null if no hit passes the
+// identity threshold or J_GENE_DB families are empty.
+function findClosestJGene(seq, chainType) {
+  const families = chainType === 'VH' ? ['IGHJ'] : ['IGKJ', 'IGLJ'];
+  const IDENTITY_THRESHOLD = 0.60;
+  let best = null;
+
+  for (const species of ['human', 'mouse']) {
+    for (const family of families) {
+      const genes = J_GENE_DB[species]?.[family];
+      if (!genes) continue;
+      for (const [name, entry] of Object.entries(genes)) {
+        const geneSeq = typeof entry === 'string' ? entry : entry.s;
+        if (!geneSeq || geneSeq.length === 0) continue;
+        const result = alignJGene(seq, geneSeq);
+        if (!result) continue;
+        if (result.identity >= IDENTITY_THRESHOLD) {
+          if (!best || result.identity > best.identity) {
+            best = {
+              gene: name, species,
+              identity: result.identity,
+              matches: result.matches,
+              total: result.total,
+              aligned1: result.aligned1,
+              aligned2: result.aligned2,
+              splitPos: result.splitPos
+            };
+          }
         }
       }
     }
@@ -3032,13 +3225,49 @@ function buildGermlineAlignmentContext(germ, cdr3) {
   return { a1, a2, alen, rawToAligned, labelChars, pipeChars };
 }
 
-function renderGermlineInfoLineHtml(germ) {
-  const pct = (germ.identity * 100).toFixed(1);
-  const speciesLabel = germ.species.charAt(0).toUpperCase() + germ.species.slice(1);
-  return '<div class="germline-info">Closest V Gene: <strong>' + germ.gene +
-    '</strong> | Species: <strong>' + speciesLabel +
-    '</strong> | Identity: <strong>' + pct + '%</strong> (' +
-    germ.matches + '/' + germ.total + ' positions)</div>';
+function renderGermlineIdentificationTableHtml(germ, jHit) {
+  const fmtSpecies = function(hit) {
+    return hit.species.charAt(0).toUpperCase() + hit.species.slice(1);
+  };
+  const fmtIdent = function(hit) {
+    return (hit.identity * 100).toFixed(1) + '%';
+  };
+  const fmtPositions = function(hit) {
+    return '(' + hit.matches + '/' + hit.total + ' positions)';
+  };
+
+  let t = '<table class="props-table">';
+  t += '<thead><tr>';
+  t += '<th>Gene</th><th>Best Match</th><th>Species</th><th class="num">Identity</th><th></th>';
+  t += '</tr></thead><tbody>';
+
+  // V gene row — always present when this function is called
+  t += '<tr>';
+  t += '<td class="prop-label">V</td>';
+  t += '<td class="prop-value">' + escapeHtml(germ.gene) + '</td>';
+  t += '<td class="prop-label">' + escapeHtml(fmtSpecies(germ)) + '</td>';
+  t += '<td class="prop-value num">' + fmtIdent(germ) + '</td>';
+  t += '<td class="prop-label">' + fmtPositions(germ) + '</td>';
+  t += '</tr>';
+
+  // J gene row
+  if (jHit) {
+    t += '<tr>';
+    t += '<td class="prop-label">J</td>';
+    t += '<td class="prop-value">' + escapeHtml(jHit.gene) + '</td>';
+    t += '<td class="prop-label">' + escapeHtml(fmtSpecies(jHit)) + '</td>';
+    t += '<td class="prop-value num">' + fmtIdent(jHit) + '</td>';
+    t += '<td class="prop-label">' + fmtPositions(jHit) + '</td>';
+    t += '</tr>';
+  } else {
+    t += '<tr>';
+    t += '<td class="prop-label">J</td>';
+    t += '<td class="prop-label" colspan="4"><em>no match found</em></td>';
+    t += '</tr>';
+  }
+
+  t += '</tbody></table>';
+  return t;
 }
 
 /** colSpec: { type: 'aligned', alen } | { type: 'msa', consensusMsa, rawToAligned } */
@@ -3125,6 +3354,38 @@ function renderGermlineMismatchRowHtml(lbl, a1, a2, colSpec) {
 }
 
 /**
+ * Renders a J gene reference track row aligned to the same coordinate system as the V gene
+ * alignment context (ctx). Gaps in the query alignment (insertions vs germline V) are carried
+ * through as blanks; J reference characters are placed at the aligned columns corresponding
+ * to their paired query positions, derived from jHit.splitPos and jHit.aligned1/aligned2.
+ * colSpec: { type: 'aligned', alen } | { type: 'msa', consensusMsa, rawToAligned }
+ */
+/**
+ * Merges J gene reference characters into the V gene aligned reference string (ctx.a2),
+ * producing a single combined germline reference that spans both the V region and FR4.
+ * Positions between V end and J start (CDR3 junction) remain as '-'.
+ * Returns a string of length ctx.alen.
+ */
+function buildMergedGermlineA2(ctx, jHit) {
+  if (!jHit) return ctx.a2;
+  const a2 = ctx.a2.split('');
+  let qptr = jHit.splitPos;
+  for (let k = 0; k < jHit.aligned1.length; k++) {
+    const q = jHit.aligned1[k];
+    const r = jHit.aligned2[k];
+    if (q !== '-') {
+      const ap = ctx.rawToAligned[qptr];
+      if (ap !== undefined && ap < ctx.alen) {
+        a2[ap] = r; // letter or '-' (gap in J reference at this query position)
+      }
+      qptr++;
+    }
+    // q === '-': insertion in J ref vs query; no raw query position, skip
+  }
+  return a2.join('');
+}
+
+/**
  * Cluster MSA only: germline summary + CDR markers + germline row + mismatch row, expanded to
  * MSA column width (aligned with consensus). No liabilities, no second ruler.
  */
@@ -3135,14 +3396,16 @@ function renderGermlineMsaOverlayHtml(consensusMsa, chainType, lbl) {
   if (!germ) return '';
 
   const cdr3 = detectCDR3(seq, chainType);
+  const jHit = findClosestJGene(seq, chainType);
   const ctx = buildGermlineAlignmentContext(germ, cdr3);
-  let html = renderGermlineInfoLineHtml(germ);
+  let html = renderGermlineIdentificationTableHtml(germ, jHit);
+  const a2Merged = buildMergedGermlineA2(ctx, jHit);
   const colSpecMsa = { type: 'msa', consensusMsa, rawToAligned: ctx.rawToAligned };
   if (germ.cdr1 || germ.cdr2 || cdr3) {
     html += renderGermlineCdrRowsHtml(lbl, ctx.labelChars, ctx.pipeChars, colSpecMsa);
   }
-  html += renderGermlineGeneRowHtml(lbl, germ, ctx.a2, colSpecMsa);
-  html += renderGermlineMismatchRowHtml(lbl, ctx.a1, ctx.a2, colSpecMsa);
+  html += renderGermlineGeneRowHtml(lbl, { gene: 'Germline' }, a2Merged, colSpecMsa);
+  html += renderGermlineMismatchRowHtml(lbl, ctx.a1, a2Merged, colSpecMsa);
   return html;
 }
 
@@ -3152,6 +3415,7 @@ function renderGermlineMsaOverlayHtml(consensusMsa, chainType, lbl) {
  */
 function renderGermlineAndLiabilitiesTrack(seq, chainType, lbl) {
   const germ = findClosestGermline(seq, chainType);
+  const jHit = findClosestJGene(seq, chainType);
   const liabilities = detectLiabilities(seq);
   const cdr3 = detectCDR3(seq, chainType);
   let html = '';
@@ -3160,7 +3424,7 @@ function renderGermlineAndLiabilitiesTrack(seq, chainType, lbl) {
 
   let germBody = '';
   if (germ) {
-    germBody += renderGermlineInfoLineHtml(germ);
+    germBody += renderGermlineIdentificationTableHtml(germ, jHit);
   } else {
     germBody += '<div class="no-data">No germline sequences loaded. Add IMGT sequences to V_GENE_DB in the source code.</div>';
   }
@@ -3177,8 +3441,9 @@ function renderGermlineAndLiabilitiesTrack(seq, chainType, lbl) {
     if (germ.cdr1 || germ.cdr2 || cdr3) {
       liabBody += renderGermlineCdrRowsHtml(lbl, ctx.labelChars, ctx.pipeChars, colSpecAligned);
     }
-    liabBody += renderGermlineGeneRowHtml(lbl, germ, ctx.a2, colSpecAligned);
-    liabBody += renderGermlineMismatchRowHtml(lbl, ctx.a1, ctx.a2, colSpecAligned);
+    const a2Merged = buildMergedGermlineA2(ctx, jHit);
+    liabBody += renderGermlineGeneRowHtml(lbl, { gene: 'Germline' }, a2Merged, colSpecAligned);
+    liabBody += renderGermlineMismatchRowHtml(lbl, ctx.a1, a2Merged, colSpecAligned);
 
     let sRow = '<div class="track-row"><span class="track-label ' + lbl + '">Sequence:</span>';
     for (let i = 0; i < ctx.alen; i++) {
@@ -3971,6 +4236,18 @@ function constantRegionIdentityLabel(match) {
   return pct + '% (' + match.matches + '/' + match.total + ' positions)';
 }
 
+function jGeneLabel(jHit) {
+  if (!jHit) return '--';
+  const speciesLabel = jHit.species.charAt(0).toUpperCase() + jHit.species.slice(1);
+  return escapeHtml(speciesLabel + ' ' + jHit.gene);
+}
+
+function jGeneIdentityLabel(jHit) {
+  if (!jHit) return '--';
+  const pct = (jHit.identity * 100).toFixed(1);
+  return pct + '% (' + jHit.matches + '/' + jHit.total + ' positions)';
+}
+
 function renderConstantRegionTableHtml(members) {
   let anyFound = false;
   const rows = members.map(function(m) {
@@ -3978,32 +4255,55 @@ function renderConstantRegionTableHtml(members) {
     const vlHit = m.vl ? findConstantRegion(m.vl) : null;
     const ch = vhHit && vhHit.regionKind === 'CH' ? vhHit : null;
     const cl = vlHit && vlHit.regionKind === 'CL' ? vlHit : null;
-    if (ch || cl) anyFound = true;
+    // J gene lookup uses the variable region only (constant region stripped)
+    const vhVar = vhHit ? m.vh.substring(0, vhHit.splitPos) : (m.vh || '');
+    const vlVar = vlHit ? m.vl.substring(0, vlHit.splitPos) : (m.vl || '');
+    const vhJ = vhVar ? findClosestJGene(vhVar, 'VH') : null;
+    const vlJ = vlVar ? findClosestJGene(vlVar, 'VL') : null;
+    if (ch || cl || vhJ || vlJ) anyFound = true;
     return {
       name: m.name,
       chKind: constantRegionKindLabel(ch),
       chIdent: constantRegionIdentityLabel(ch),
       clKind: constantRegionKindLabel(cl),
       clIdent: constantRegionIdentityLabel(cl),
+      vhJKind: jGeneLabel(vhJ),
+      vhJIdent: jGeneIdentityLabel(vhJ),
+      vlJKind: jGeneLabel(vlJ),
+      vlJIdent: jGeneIdentityLabel(vlJ),
     };
   });
   if (!anyFound) return '';
 
   let tableHtml = '<table class="props-table" style="margin:0 0 8px 0">';
-  tableHtml += '<thead><tr><th style="text-align:left">Name</th><th style="text-align:left">CH</th>' +
-    '<th style="text-align:left">CH identity</th><th style="text-align:left">CL</th>' +
-    '<th style="text-align:left">CL identity</th></tr></thead>';
+  tableHtml += '<thead><tr>' +
+    '<th style="text-align:left">Name</th>' +
+    '<th style="text-align:left">CH</th>' +
+    '<th style="text-align:left">CH identity</th>' +
+    '<th style="text-align:left">CL</th>' +
+    '<th style="text-align:left">CL identity</th>' +
+    '<th style="text-align:left">VH J</th>' +
+    '<th style="text-align:left">VH J identity</th>' +
+    '<th style="text-align:left">VL J</th>' +
+    '<th style="text-align:left">VL J identity</th>' +
+    '</tr></thead>';
   tableHtml += '<tbody>';
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
-    tableHtml += '<tr><td style="vertical-align:top">' + escapeHtml(r.name) + '</td>' +
+    tableHtml += '<tr>' +
+      '<td style="vertical-align:top">' + escapeHtml(r.name) + '</td>' +
       '<td style="vertical-align:top">' + r.chKind + '</td>' +
       '<td style="vertical-align:top">' + r.chIdent + '</td>' +
       '<td style="vertical-align:top">' + r.clKind + '</td>' +
-      '<td style="vertical-align:top">' + r.clIdent + '</td></tr>';
+      '<td style="vertical-align:top">' + r.clIdent + '</td>' +
+      '<td style="vertical-align:top">' + r.vhJKind + '</td>' +
+      '<td style="vertical-align:top">' + r.vhJIdent + '</td>' +
+      '<td style="vertical-align:top">' + r.vlJKind + '</td>' +
+      '<td style="vertical-align:top">' + r.vlJIdent + '</td>' +
+      '</tr>';
   }
   tableHtml += '</tbody></table>';
-  return collapsibleSectionHtml('Constant Region', tableHtml, true, 'msa');
+  return collapsibleSectionHtml('Constant Region & J Gene', tableHtml, true, 'msa');
 }
 
 function renderClusterResults(clusters, highlightNames) {

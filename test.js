@@ -12,11 +12,9 @@ const path = require("path");
 // --- Release footer must match package.json (commit-and-tag-version keeps them in sync) ---
 const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf-8");
 const pkg = JSON.parse(
-  fs.readFileSync(path.join(__dirname, "package.json"), "utf-8")
+  fs.readFileSync(path.join(__dirname, "package.json"), "utf-8"),
 );
-const footerMatch = html.match(
-  /<span id="lambs-app-version">([^<]*)<\/span>/
-);
+const footerMatch = html.match(/<span id="lambs-app-version">([^<]*)<\/span>/);
 if (!footerMatch) {
   console.error('index.html: missing <span id="lambs-app-version">...</span>');
   process.exit(1);
@@ -25,7 +23,7 @@ const footerVersion = footerMatch[1].trim();
 if (footerVersion !== pkg.version) {
   console.error(
     `Version mismatch: package.json "${pkg.version}" vs index.html footer "${footerVersion}". ` +
-      "Run npm run release (commit-and-tag-version) so both stay aligned."
+      "Run npm run release (commit-and-tag-version) so both stay aligned.",
   );
   process.exit(1);
 }
@@ -88,6 +86,11 @@ const wrappedJS = `
   exports.CONST_REGION_DB = CONST_REGION_DB;
   exports.EXAMPLE_CSV = EXAMPLE_CSV;
   exports.csvChainColumnIndices = csvChainColumnIndices;
+  exports.alignJGene = alignJGene;
+  exports.findClosestJGene = findClosestJGene;
+  exports.J_GENE_DB = J_GENE_DB;
+  exports.buildGermlineAlignmentContext = buildGermlineAlignmentContext;
+  exports.buildMergedGermlineA2 = buildMergedGermlineA2;
 })(this);
 `;
 const ctx = {};
@@ -131,6 +134,11 @@ const {
   CONST_REGION_DB,
   EXAMPLE_CSV,
   csvChainColumnIndices,
+  alignJGene,
+  findClosestJGene,
+  J_GENE_DB,
+  buildGermlineAlignmentContext,
+  buildMergedGermlineA2,
 } = ctx;
 
 // --- Test harness ---
@@ -2818,6 +2826,339 @@ assert(
   findConstantRegion(TEST_VAR_REGION + truncatedCHPrefix) === null,
   "findConstantRegion: returns null when only a short CH prefix is present",
 );
+// ============================================================
+// alignJGene (semi-global: free prefix + free suffix, ref fully consumed)
+// Real IMGT J gene sequences and antibody variable regions throughout.
+// ============================================================
+section("alignJGene");
+
+// Reference constants — sequences pulled from J_GENE_DB (populated from IMGT FASTA files)
+// and the cdr3TestCases ground-truth table defined earlier in this file.
+const IGHJ4_01 = J_GENE_DB.human.IGHJ["IGHJ4*01"].s;
+const IGKJ1_01 = J_GENE_DB.human.IGKJ["IGKJ1*01"].s;
+const IGLJ2_01 = J_GENE_DB.human.IGLJ["IGLJ2*01"].s;
+const _adaVhTc = cdr3TestCases.find(function (tc) {
+  return tc.id === "Adalimumab_vh";
+});
+const _adaVlTc = cdr3TestCases.find(function (tc) {
+  return tc.id === "Adalimumab_vl";
+});
+const _evoVlTc = cdr3TestCases.find(function (tc) {
+  return tc.id === "Evolocumab_vl";
+});
+const ADALIMUMAB_VH = _adaVhTc.seq;
+const ADALIMUMAB_VL = _adaVlTc.seq;
+const EVOLOCUMAB_VL = _evoVlTc.seq;
+const ADA_CDR3_VH = _adaVhTc.cdr3; // 14 AA CDR3 used as a realistic J-gene prefix
+
+// Null for empty reference
+assert(
+  alignJGene(ADALIMUMAB_VH, "") === null,
+  "alignJGene: null for empty reference",
+);
+
+// Empty query
+const ajEmpty = alignJGene("", IGHJ4_01);
+assert(ajEmpty !== null, "alignJGene: empty query doesn't crash");
+assert(ajEmpty.identity === 0, "alignJGene: empty query = 0 identity");
+
+// Identical: exact J gene sequence as both query and reference
+const ajIdent = alignJGene(IGHJ4_01, IGHJ4_01);
+assert(ajIdent.identity === 1.0, "alignJGene (identical): identity = 1.0");
+assert(ajIdent.splitPos === 0, "alignJGene (identical): splitPos = 0");
+assert(
+  ajIdent.matches === 15 && ajIdent.total === 15,
+  "alignJGene (identical): 15/15",
+);
+
+// IGHJ4*01 against Adalimumab VH — FR4 (WGQGTLVTVSS) appears verbatim at the 3' end;
+// the first 4 residues of IGHJ4 (YFDY) overlap the CDR3 with 2 mismatches (SL→YF)
+assert(
+  ADALIMUMAB_VH.endsWith("WGQGTLVTVSS"),
+  "alignJGene setup: Adalimumab VH ends with IGHJ4 FR4",
+);
+const ajVH = alignJGene(ADALIMUMAB_VH, IGHJ4_01);
+assert(ajVH !== null, "alignJGene (Adalimumab VH + IGHJ4*01): returns result");
+assert(
+  ajVH.total === 15,
+  "alignJGene (Adalimumab VH + IGHJ4*01): all 15 J positions covered",
+);
+assert(
+  ajVH.matches === 13,
+  `alignJGene (Adalimumab VH + IGHJ4*01): matches=${ajVH.matches}, expected 13 (11 FR4 + 2 in CDR3/J overlap)`,
+);
+assertApprox(
+  ajVH.identity,
+  13 / 15,
+  0.001,
+  "alignJGene (Adalimumab VH + IGHJ4*01): identity = 13/15",
+);
+assert(
+  ajVH.splitPos < ADALIMUMAB_VH.length,
+  "alignJGene (Adalimumab VH + IGHJ4*01): splitPos within query",
+);
+
+// Precise: Adalimumab CDR3 prefix followed immediately by the full IGHJ4*01 —
+// the exact split boundary is known, so splitPos and identity must be exact
+const ajPrecise = alignJGene(ADA_CDR3_VH + IGHJ4_01, IGHJ4_01);
+assert(
+  ajPrecise !== null,
+  "alignJGene (CDR3 + IGHJ4*01, precise): returns result",
+);
+assert(
+  ajPrecise.identity === 1.0,
+  "alignJGene (CDR3 + IGHJ4*01, precise): identity = 1.0",
+);
+assert(
+  ajPrecise.matches === 15 && ajPrecise.total === 15,
+  "alignJGene (CDR3 + IGHJ4*01, precise): 15/15",
+);
+assert(
+  ajPrecise.splitPos === ADA_CDR3_VH.length,
+  `alignJGene (CDR3 + IGHJ4*01, precise): splitPos=${ajPrecise.splitPos}, expected ${ADA_CDR3_VH.length}`,
+);
+
+// *** C-TERMINAL TRIMMING: IGHJ4*01 (15 AA) with last 2 residues removed ***
+// Models VDJ recombination exonuclease activity at the 3' end of the J segment.
+// The aligner fills the 2 missing ref positions using CDR3 chars (mismatches), so
+// matches = 13, total = 15, identity ≈ 13/15 — still well above the 0.60 threshold.
+const IGHJ4_01_TRIM2 = IGHJ4_01.slice(0, -2);
+const ajTrim2 = alignJGene(ADA_CDR3_VH + IGHJ4_01_TRIM2, IGHJ4_01);
+assert(ajTrim2 !== null, "alignJGene (2 AA C-term trim): returns result");
+assert(
+  ajTrim2.total === 15,
+  "alignJGene (2 AA C-term trim): all 15 J ref positions accounted for",
+);
+assert(
+  ajTrim2.matches === 13,
+  `alignJGene (2 AA C-term trim): matches=${ajTrim2.matches}, expected 13`,
+);
+assertApprox(
+  ajTrim2.identity,
+  13 / 15,
+  0.001,
+  "alignJGene (2 AA C-term trim): identity ≈ 13/15",
+);
+assert(
+  ajTrim2.identity >= 0.6,
+  "alignJGene (2 AA C-term trim): identity above 0.60 detection threshold",
+);
+
+// IGKJ1*01 (WTFGQGTKVEIK) against Adalimumab VL (kappa) —
+// the last 10 residues FGQGTKVEIK are an exact suffix match; W vs Y is the only mismatch
+assert(
+  ADALIMUMAB_VL.endsWith("FGQGTKVEIK"),
+  "alignJGene setup: Adalimumab VL ends with IGKJ1 FR4 suffix",
+);
+const ajVLK = alignJGene(ADALIMUMAB_VL, IGKJ1_01);
+assert(ajVLK !== null, "alignJGene (Adalimumab VL + IGKJ1*01): returns result");
+assert(
+  ajVLK.total === 12,
+  "alignJGene (Adalimumab VL + IGKJ1*01): all 12 J positions covered",
+);
+assert(
+  ajVLK.matches === 11,
+  `alignJGene (Adalimumab VL + IGKJ1*01): matches=${ajVLK.matches}, expected 11`,
+);
+assertApprox(
+  ajVLK.identity,
+  11 / 12,
+  0.001,
+  "alignJGene (Adalimumab VL + IGKJ1*01): identity = 11/12",
+);
+
+// IGLJ2*01 (VVFGGGTKLTVL) against Evolocumab VL (lambda) —
+// the last 10 residues FGGGTKLTVL are an exact suffix match; V vs M is the only mismatch
+assert(
+  EVOLOCUMAB_VL.endsWith("FGGGTKLTVL"),
+  "alignJGene setup: Evolocumab VL ends with IGLJ2 FR4 suffix",
+);
+const ajVLL = alignJGene(EVOLOCUMAB_VL, IGLJ2_01);
+assert(ajVLL !== null, "alignJGene (Evolocumab VL + IGLJ2*01): returns result");
+assert(
+  ajVLL.total === 12,
+  "alignJGene (Evolocumab VL + IGLJ2*01): all 12 J positions covered",
+);
+assert(
+  ajVLL.matches === 11,
+  `alignJGene (Evolocumab VL + IGLJ2*01): matches=${ajVLL.matches}, expected 11`,
+);
+assertApprox(
+  ajVLL.identity,
+  11 / 12,
+  0.001,
+  "alignJGene (Evolocumab VL + IGLJ2*01): identity = 11/12",
+);
+
+// Single internal mutation: Adalimumab CDR3 + IGHJ4*01 with last S→A substitution —
+// 14/15 positions match; splitPos and counts must be exact
+const IGHJ4_01_MUT1 = IGHJ4_01.slice(0, -1) + "A"; // "YFDYWGQGTLVTVSA"
+const ajMut1 = alignJGene(ADA_CDR3_VH + IGHJ4_01_MUT1, IGHJ4_01);
+assert(
+  ajMut1 !== null,
+  "alignJGene (1 substitution in IGHJ4*01): returns result",
+);
+assert(
+  ajMut1.splitPos === ADA_CDR3_VH.length,
+  `alignJGene (1 substitution): splitPos=${ajMut1.splitPos}, expected ${ADA_CDR3_VH.length}`,
+);
+assert(
+  ajMut1.matches === 14,
+  `alignJGene (1 substitution): matches=${ajMut1.matches}, expected 14`,
+);
+assert(ajMut1.total === 15, "alignJGene (1 substitution): total = 15");
+assertApprox(
+  ajMut1.identity,
+  14 / 15,
+  0.001,
+  "alignJGene (1 substitution): identity = 14/15",
+);
+
+// ============================================================
+// findClosestJGene
+// ============================================================
+section("findClosestJGene");
+
+// Adalimumab VH → real IGHJ4 family entry (13/15: 11 exact FR4 + 2 CDR3-overlap mismatches)
+const fjVH = findClosestJGene(ADALIMUMAB_VH, "VH");
+assert(fjVH !== null, "findClosestJGene (Adalimumab VH): finds a J gene");
+assert(
+  /^IGHJ4/.test(fjVH.gene),
+  `findClosestJGene (Adalimumab VH): gene is IGHJ4 family, got ${fjVH && fjVH.gene}`,
+);
+assert(
+  fjVH.species === "human",
+  "findClosestJGene (Adalimumab VH): species = human",
+);
+assert(
+  fjVH.matches === 13 && fjVH.total === 15,
+  `findClosestJGene (Adalimumab VH): ${fjVH.matches}/15 positions, expected 13/15`,
+);
+assertApprox(
+  fjVH.identity,
+  13 / 15,
+  0.001,
+  "findClosestJGene (Adalimumab VH): identity = 13/15",
+);
+
+// Adalimumab VL (kappa) → real IGKJ family entry (11/12: FGQGTKVEIK exact + 1 mismatch on W/Y)
+const fjVLK = findClosestJGene(ADALIMUMAB_VL, "VL");
+assert(fjVLK !== null, "findClosestJGene (Adalimumab VL): finds a J gene");
+assert(
+  /^IGKJ/.test(fjVLK.gene),
+  `findClosestJGene (Adalimumab VL): gene is IGKJ family, got ${fjVLK && fjVLK.gene}`,
+);
+assert(
+  fjVLK.species === "human",
+  "findClosestJGene (Adalimumab VL): species = human",
+);
+assert(
+  fjVLK.matches === 11 && fjVLK.total === 12,
+  `findClosestJGene (Adalimumab VL): ${fjVLK.matches}/12 positions, expected 11/12`,
+);
+assertApprox(
+  fjVLK.identity,
+  11 / 12,
+  0.001,
+  "findClosestJGene (Adalimumab VL): identity = 11/12",
+);
+
+// Evolocumab VL (lambda) → real IGLJ family entry (11/12: FGGGTKLTVL exact + 1 mismatch on V/M)
+const fjVLL = findClosestJGene(EVOLOCUMAB_VL, "VL");
+assert(fjVLL !== null, "findClosestJGene (Evolocumab VL): finds a J gene");
+assert(
+  /^IGLJ/.test(fjVLL.gene),
+  `findClosestJGene (Evolocumab VL): gene is IGLJ family, got ${fjVLL && fjVLL.gene}`,
+);
+assert(
+  fjVLL.species === "human",
+  "findClosestJGene (Evolocumab VL): species = human",
+);
+assert(
+  fjVLL.matches === 11 && fjVLL.total === 12,
+  `findClosestJGene (Evolocumab VL): ${fjVLL.matches}/12 positions, expected 11/12`,
+);
+assertApprox(
+  fjVLL.identity,
+  11 / 12,
+  0.001,
+  "findClosestJGene (Evolocumab VL): identity = 11/12",
+);
+
+// VH chain only searches IGHJ, never IGKJ/IGLJ —
+// inject a kappa J gene and confirm it is never returned for a VH query
+J_GENE_DB.human.IGKJ["TEST-IGKJ-VH-BOUNDARY*01"] = { s: IGKJ1_01 };
+const fjWrongChain = findClosestJGene(ADALIMUMAB_VH, "VH");
+assert(
+  fjWrongChain === null || fjWrongChain.gene !== "TEST-IGKJ-VH-BOUNDARY*01",
+  "findClosestJGene: VH query never returns a kappa J gene",
+);
+delete J_GENE_DB.human.IGKJ["TEST-IGKJ-VH-BOUNDARY*01"];
+
+// Below-threshold identity (< 0.60) is suppressed —
+// inject a scrambled sequence and confirm it is never returned
+J_GENE_DB.human.IGHJ["TEST-IGHJ-SCRAMBLED*01"] = { s: "MPPKRQTCALSVEDY" };
+const fjLow = findClosestJGene(ADALIMUMAB_VH, "VH");
+assert(
+  fjLow === null || fjLow.gene !== "TEST-IGHJ-SCRAMBLED*01",
+  "findClosestJGene: scrambled J gene below 0.60 threshold is never returned",
+);
+delete J_GENE_DB.human.IGHJ["TEST-IGHJ-SCRAMBLED*01"];
+
+// ============================================================
+// buildMergedGermlineA2
+// ============================================================
+section("buildMergedGermlineA2");
+
+// Use Adalimumab VH and IGHJ4*01 for a realistic end-to-end scenario.
+const bmgGerm = findClosestGermline(ADALIMUMAB_VH, "VH");
+assert(
+  bmgGerm !== null,
+  "buildMergedGermlineA2 setup: V germline found for Adalimumab VH",
+);
+const bmgCtx = buildGermlineAlignmentContext(bmgGerm, null);
+
+// Null jHit returns ctx.a2 unchanged
+assert(
+  buildMergedGermlineA2(bmgCtx, null) === bmgCtx.a2,
+  "buildMergedGermlineA2: null jHit returns ctx.a2 unchanged",
+);
+
+// With IGHJ4*01 aligned to Adalimumab VH, the FR4 region (WGQGTLVTVSS) should
+// appear in the merged reference at the positions corresponding to the J gene
+const bmgJResult = alignJGene(ADALIMUMAB_VH, IGHJ4_01);
+const bmgJHit = {
+  gene: "IGHJ4*01",
+  species: "human",
+  aligned1: bmgJResult.aligned1,
+  aligned2: bmgJResult.aligned2,
+  identity: bmgJResult.identity,
+  matches: bmgJResult.matches,
+  total: bmgJResult.total,
+  splitPos: bmgJResult.splitPos,
+};
+const bmgMerged = buildMergedGermlineA2(bmgCtx, bmgJHit);
+
+assert(
+  bmgMerged.length === bmgCtx.alen,
+  "buildMergedGermlineA2: merged length equals ctx.alen",
+);
+assert(
+  bmgMerged !== bmgCtx.a2,
+  "buildMergedGermlineA2: merged differs from ctx.a2 when J gene provided",
+);
+// IGHJ4 FR4 (WGQGTLVTVSS) is at the 3' end of the VH and exactly matches,
+// so those characters should appear verbatim in the merged reference
+assert(
+  bmgMerged.includes("WGQGTLVTVSS"),
+  "buildMergedGermlineA2: merged reference contains IGHJ4 FR4 (WGQGTLVTVSS)",
+);
+// The V gene framework region at the 5' end is untouched by J gene merging
+assert(
+  bmgMerged.slice(0, 70) === bmgCtx.a2.slice(0, 70),
+  "buildMergedGermlineA2: V gene framework region (first 70 positions) unchanged from ctx.a2",
+);
+
 // ============================================================
 // Summary
 // ============================================================
