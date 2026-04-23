@@ -1,6 +1,6 @@
 {
   "name": "lambs",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "LAMBS - Local Analysis of mAb Sequences",
   "scripts": {
     "release": "commit-and-tag-version --config ./scripts/version-updater/versionrc.cjs",

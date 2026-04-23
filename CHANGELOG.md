@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.8.0](https://github.com/dcroote/lambs/compare/v0.7.0...v0.8.0) (2026-04-23)
+
+
+### Features
+
+* add J gene identification and alignment ([1777cbb](https://github.com/dcroote/lambs/commit/1777cbbd2bb965db657d04c290377e176e57efff))
+
 ## [0.7.0](https://github.com/dcroote/lambs/compare/v0.6.1...v0.7.0) (2026-04-19)
 
 
