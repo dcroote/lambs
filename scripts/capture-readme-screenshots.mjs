@@ -18,7 +18,7 @@ const VIEWPORT_WIDTH = 1200;
 const SHOTS = [
   {
     filename: "screenshot_single_mab_analysis.png",
-    viewportHeight: 1090,
+    viewportHeight: 1220,
     setup: async (page) => {
       await page.evaluate(() => {
         switchTab("single");
@@ -34,7 +34,7 @@ const SHOTS = [
   },
   {
     filename: "screenshot_multiple_mab_analysis.png",
-    viewportHeight: 1130,
+    viewportHeight: 1200,
     setup: async (page) => {
       await page.evaluate(() => {
         switchTab("multi");

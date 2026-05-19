@@ -25,32 +25,127 @@ limitations under the License.
 
 html { overflow-y: scroll; }
 
+:root {
+  --font-ui: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'Consolas', 'Menlo', 'Liberation Mono', 'Courier New', monospace;
+  --ink: #0f172a;
+  --text: var(--ink);
+  --text-muted: #475569;
+  --text-hint: #64748b;
+  --border: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --surface: #ffffff;
+  --surface-raised: #f8fafc;
+  --surface-sunken: #f1f5f9;
+  --page-bg: #e4eaf2;
+  --brand: #1a3d5c;
+  --brand-light: #e8f1f9;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-soft: #dbeafe;
+  --success: #15803d;
+  --danger: #dc2626;
+  --danger-hover: #b91c1c;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 14px rgba(15, 23, 42, 0.08);
+  --section-gap: 28px;
+}
+
 body {
-  font-family: 'Consolas', 'Menlo', 'Liberation Mono', 'Courier New', monospace;
-  background: #f4f4f4;
-  color: #1a1a1a;
-  line-height: 1.6;
+  font-family: var(--font-ui);
+  background: var(--page-bg);
+  color: var(--text);
+  line-height: 1.55;
+  font-size: 15px;
+}
+
+.text-hint {
+  font-size: 0.8125rem;
+  color: var(--text-hint);
+  line-height: 1.45;
+}
+
+.text-hint a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.text-hint a:hover {
+  text-decoration: underline;
 }
 
 .container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 28px 24px 32px;
 }
 
-h1 {
-  font-size: 1.3em;
-  margin-bottom: 20px;
-  border-bottom: 2px solid #bbb;
-  padding-bottom: 10px;
+.app-header {
+  background: var(--brand);
+  color: #fff;
+  padding: 22px 28px 20px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  border: 1px solid #153248;
+  border-bottom: none;
+}
+
+.app-eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+  margin-bottom: 6px;
+}
+
+.app-header h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+  padding: 0;
+  border: none;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+.app-shell {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.card-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+/* Major blocks within each tab: spacing only (no divider lines). */
+.tab-panel-block {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  padding-bottom: var(--section-gap);
+  margin-bottom: var(--section-gap);
+}
+
+.tab-panel-block:empty {
+  padding-bottom: 0;
+  margin-bottom: 0;
+  border-bottom: none;
 }
 
 .input-section {
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 16px;
-  margin-bottom: 24px;
+  padding: 0;
 }
 
 .input-row {
@@ -63,39 +158,37 @@ h1 {
 
 .input-group label {
   display: block;
-  font-weight: bold;
+  font-weight: 600;
   margin-bottom: 4px;
-  font-size: 0.9em;
+  font-size: 0.875rem;
+  color: var(--text);
 }
 
 .input-group textarea {
   width: 100%;
-  font-family: 'Courier New', Courier, monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 3px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
   resize: vertical;
+  background: var(--surface);
+  color: var(--ink);
+  line-height: 1.45;
+}
+
+.input-group textarea:focus {
+  outline: 2px solid var(--accent-soft);
+  border-color: var(--accent);
 }
 
 .controls-row {
   display: flex;
   align-items: center;
-  gap: 20px;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-top: 4px;
 }
-
-#analyze-btn {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 13px;
-  padding: 8px 28px;
-  background: #2266cc;
-  color: #fff;
-  border: none;
-  border-radius: 3px;
-  cursor: pointer;
-}
-
-#analyze-btn:hover { background: #1a4f99; }
 
 .toggle-label {
   font-size: 0.9em;
@@ -108,37 +201,71 @@ h1 {
   margin: 6px 0 10px 2ch;
 }
 
-.chain-panel {
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 16px;
-  margin-bottom: 16px;
+.chain-panel,
+.cluster-panel {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 18px 20px 20px;
+  margin-bottom: var(--section-gap);
+  box-shadow: none;
 }
 
-.chain-panel > summary.panel-summary {
-  font-size: 1.2em;
-  margin-bottom: 16px;
-  color: #333;
+.chain-panel > summary.panel-summary,
+.cluster-panel > summary.panel-summary {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 0;
+  color: var(--brand);
   text-align: center;
 }
 
-.section-title {
-  font-size: 0.9em;
-  font-weight: bold;
-  color: #000;
-  margin: 32px 0 6px 0;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 3px;
+/* Colored band: top-level chain / cluster titles only (e.g. VH Chain Analysis). */
+details.chain-panel.collapsible-panel > summary.panel-summary,
+details.cluster-panel.collapsible-panel > summary.panel-summary {
+  background: var(--brand-light);
+  margin: -18px -20px 18px -20px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border-strong);
+}
+
+details.chain-panel.collapsible-panel[open] > summary.panel-summary,
+details.cluster-panel.collapsible-panel[open] > summary.panel-summary {
+  border-radius: calc(var(--radius-sm) - 1px) calc(var(--radius-sm) - 1px) 0 0;
+}
+
+details.chain-panel.collapsible-panel:not([open]) > summary.panel-summary,
+details.cluster-panel.collapsible-panel:not([open]) > summary.panel-summary {
+  margin-bottom: -18px;
+  padding-bottom: 14px;
+  border-bottom: none;
+  border-radius: calc(var(--radius-sm) - 1px);
+}
+
+.section-title,
+.msa-section-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 10px 0;
+  padding: 0 0 6px 0;
+  border-left: none;
+  border-bottom: 1px solid var(--border);
+  letter-spacing: normal;
+  text-transform: none;
 }
 
 details.collapsible-section {
-  margin-top: 32px;
+  margin-top: 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
 }
 
 .chain-panel > .collapsible-panel-body > details.collapsible-section:first-of-type,
 .cluster-panel > .collapsible-panel-body > details.collapsible-section:first-of-type {
   margin-top: 0;
+  padding-top: 0;
+  border-top: none;
 }
 
 details.collapsible-panel {
@@ -159,19 +286,19 @@ details.collapsible-panel > summary.panel-summary::before {
   content: '\25b6\00a0';
   display: inline-block;
   font-size: 0.65em;
-  color: #666;
+  color: var(--accent);
   margin-right: 0.35em;
   transform: rotate(0deg);
   transition: transform 0.12s ease;
 }
 
-details.collapsible-panel[open] > summary.panel-summary::before {
-  transform: rotate(90deg);
+details.collapsible-panel.chain-panel > summary.panel-summary::before,
+details.collapsible-panel.cluster-panel > summary.panel-summary::before {
+  color: var(--brand);
 }
 
-.chain-panel:not([open]) > summary.panel-summary,
-.cluster-panel:not([open]) > summary.panel-summary {
-  margin-bottom: 0;
+details.collapsible-panel[open] > summary.panel-summary::before {
+  transform: rotate(90deg);
 }
 
 details.collapsible-section > summary.section-title {
@@ -186,17 +313,21 @@ details.collapsible-section > summary.section-title::-webkit-details-marker {
   display: none;
 }
 
-details.collapsible-section > summary.section-title::before {
+details.collapsible-section > summary.section-title::before,
+details.collapsible-section > summary.msa-section-title::before {
   content: '\25b6\00a0';
   display: inline-block;
   font-size: 0.65em;
-  color: #666;
+  color: var(--text-muted);
   margin-right: 0.35em;
   transform: rotate(0deg);
   transition: transform 0.12s ease;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
-details.collapsible-section[open] > summary.section-title::before {
+details.collapsible-section[open] > summary.section-title::before,
+details.collapsible-section[open] > summary.msa-section-title::before {
   transform: rotate(90deg);
 }
 
@@ -206,7 +337,12 @@ details.collapsible-section > .collapsible-body {
 
 .track-block {
   overflow-x: auto;
-  padding: 2px 0;
+  font-family: var(--font-mono);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  margin: 4px 0 8px;
 }
 
 .track-row {
@@ -218,7 +354,7 @@ details.collapsible-section > .collapsible-body {
 .track-label {
   display: inline-block;
   text-align: right;
-  color: #666;
+  color: var(--text-muted);
   padding-right: 1ch;
 }
 
@@ -247,37 +383,57 @@ details.collapsible-section > .collapsible-body {
 #multi-results.aa-coloring .seq-char.aa-special { color: #dd6600; }
 
 .germline-info {
-  font-size: 0.9em;
-  margin: 6px 20px;
-  color: #333;
+  font-size: 0.875rem;
+  margin: 8px 20px 12px;
+  padding: 0;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  line-height: 1.5;
 }
 
 .props-table {
   width: calc(100% - 40px);
-  margin: 6px 20px 10px 20px;
+  margin: 4px 20px 12px 20px;
   border-collapse: collapse;
-  font-size: 0.88em;
+  font-size: 0.875rem;
 }
 .props-table th {
   text-align: left;
-  color: #666;
-  font-weight: normal;
-  padding: 2px 18px 4px 0;
-  border-bottom: 1px solid #ddd;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+  padding: 8px 18px 6px 0;
+  border-bottom: 1px solid var(--border-strong);
   white-space: nowrap;
+  background: transparent;
 }
-.props-table th.num, .props-table td.num { text-align: right; }
 .props-table td {
-  padding: 3px 18px 3px 0;
-  border-bottom: 1px dotted #e8e8e8;
+  padding: 6px 18px 6px 0;
+  border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
-.props-table .prop-label { color: #666; }
-.props-table .prop-value { font-weight: 600; color: #222; }
-.props-table .prop-value.prop-in-iqr  { color: #2a7a3b; }
-.props-table .prop-value.prop-out-iqr { color: #b85c00; }
-.props-table .prop-pct { color: #666; }
-.props-table .prop-iqr { color: #666; }
+.props-table .prop-label { color: var(--text-muted); }
+.props-table .prop-value { font-weight: 600; color: var(--ink); }
+.props-table .prop-value.prop-in-iqr  { color: #15803d; }
+.props-table .prop-value.prop-out-iqr { color: #c2410c; }
+.props-table .prop-pct { color: var(--text-muted); }
+.props-table th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.props-table td.num { text-align: right; }
+.props-table td.num,
+.props-table .prop-value.num {
+  font-family: var(--font-mono);
+}
+
+.msa-germline-id .props-table {
+  width: 100%;
+  margin: 0 0 14px 0;
+}
 
 .no-data {
   color: #666;
@@ -293,27 +449,39 @@ details.collapsible-section > .collapsible-body {
 }
 
 .legend {
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 16px;
-  margin-bottom: 16px;
-  font-size: 0.85em;
-  line-height: 1.5;
+  background: transparent;
+  border: none;
+  border-top: 1px solid var(--border-strong);
+  border-radius: 0;
+  padding: var(--section-gap) 0 0;
+  margin: var(--section-gap) 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  box-shadow: none;
 }
 
 .legend h3 {
-  font-size: 1em;
-  margin-bottom: 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+  margin-bottom: 12px;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .legend-section {
   margin-bottom: 14px;
+  padding-left: 0;
+  border-left: none;
 }
 
 .legend-section strong {
   display: block;
   margin-bottom: 4px;
+  color: var(--text);
+  font-size: 0.875rem;
 }
 
 .legend-row {
@@ -321,6 +489,7 @@ details.collapsible-section > .collapsible-body {
 }
 
 .legend-colors span {
+  font-family: var(--font-mono);
   font-weight: bold;
   margin-right: 1ch;
 }
@@ -334,52 +503,50 @@ details.collapsible-section > .collapsible-body {
 
 .tab-bar {
   display: flex;
-  gap: 0;
-  margin-bottom: 0;
+  gap: 4px;
+  padding: 0 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-strong);
 }
 
 .tab-btn {
-  font-family: 'Consolas', 'Courier New', Courier, monospace;
-  font-size: 13px;
-  padding: 8px 24px;
-  background: #e8e8e8;
-  color: #555;
-  border: 1px solid #ccc;
-  border-bottom: none;
-  border-radius: 4px 4px 0 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 14px 18px;
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
   cursor: pointer;
-  margin-right: 2px;
+  margin: 0 0 -1px 0;
 }
 
-.tab-btn:hover { background: #ddd; }
+.tab-btn:hover {
+  color: var(--text);
+}
 
 .tab-btn.active {
-  background: #fff;
-  color: #1a1a1a;
-  font-weight: bold;
-  border-bottom: 1px solid #fff;
+  background: transparent;
+  color: var(--accent);
+  font-weight: 600;
+  border-bottom-color: var(--accent);
   position: relative;
   z-index: 1;
 }
 
 .tab-panel {
-  border-top: 1px solid #ccc;
-  padding-top: 16px;
-  margin-top: -1px;
+  padding: 24px;
+  border-top: none;
+  margin-top: 0;
 }
 
 .basket-section {
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 16px;
-  margin-bottom: 16px;
+  padding: 0;
 }
 
-.basket-section h3 {
-  font-size: 0.95em;
-  margin-bottom: 10px;
-  color: #333;
+.basket-section h3.card-title {
+  margin-bottom: 12px;
 }
 
 .basket-upload-row {
@@ -391,28 +558,30 @@ details.collapsible-section > .collapsible-body {
 
 .basket-upload-row label {
   font-size: 0.9em;
-  font-weight: bold;
+  font-weight: 600;
 }
 
 .basket-table-wrap {
   overflow-x: auto;
   overflow-y: auto;
   max-height: min(45vh, 18rem);
-  margin: 8px 0;
-  border: 1px solid #eee;
-  border-radius: 2px;
+  margin: 10px 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
 }
 
 .basket-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 0.8125rem;
 }
 
 .basket-table th, .basket-table td {
   text-align: left;
-  padding: 4px 8px;
-  border-bottom: 1px solid #eee;
+  padding: 3px 10px;
+  line-height: 1.3;
+  border-bottom: 1px solid var(--border);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -420,20 +589,41 @@ details.collapsible-section > .collapsible-body {
 }
 
 .basket-table th {
-  background: #f8f8f8;
-  font-weight: bold;
-  color: #555;
-  border-bottom: 2px solid #ddd;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  background: var(--surface-raised);
+  font-weight: 600;
+  font-size: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-strong);
 }
 
 .basket-table thead th {
   position: sticky;
   top: 0;
   z-index: 1;
-  box-shadow: 0 1px 0 #ddd;
+  box-shadow: 0 1px 0 var(--border);
 }
 
-.basket-table tr:hover { background: #f9f9fb; }
+.basket-table .seq-preview {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.basket-table .btn-sm {
+  padding: 1px 7px;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.basket-table td.num {
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+.basket-table tr:hover { background: var(--surface-raised); }
 
 .basket-actions {
   display: flex;
@@ -443,30 +633,65 @@ details.collapsible-section > .collapsible-body {
 }
 
 .btn {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 13px;
-  padding: 6px 18px;
-  border: none;
-  border-radius: 3px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 8px 18px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   cursor: pointer;
+  line-height: 1.25;
 }
 
-.btn-primary { background: #2266cc; color: #fff; }
-.btn-primary:hover { background: #1a4f99; }
-.btn-danger { background: #cc4444; color: #fff; }
-.btn-danger:hover { background: #a33; }
-.btn-secondary { background: #888; color: #fff; }
-.btn-secondary:hover { background: #666; }
-.btn-sm { padding: 2px 10px; font-size: 12px; }
-.btn:disabled { opacity: 0.5; cursor: default; }
+.btn-lg {
+  padding: 10px 28px;
+  font-weight: 600;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+}
+.btn-danger:hover:not(:disabled) {
+  background: var(--danger-hover);
+  border-color: var(--danger-hover);
+}
+.btn-secondary {
+  background: var(--surface);
+  color: var(--text-muted);
+  border-color: var(--border-strong);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--surface-sunken);
+  color: var(--brand);
+  border-color: var(--brand);
+}
+.btn-sm { padding: 5px 12px; font-size: 0.8125rem; }
+.btn:disabled { opacity: 0.45; cursor: default; }
 
 .multi-liability-options {
-  margin: 0 0 16px 0;
-  padding: 12px 14px;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 0.85em;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  font-size: 0.8125rem;
+  box-shadow: none;
+}
+
+.multi-liability-options:not(:empty) {
+  padding-bottom: var(--section-gap);
+  margin-bottom: var(--section-gap);
+  border-bottom: 1px solid var(--border-strong);
 }
 
 .multi-liability-options fieldset {
@@ -480,7 +705,7 @@ details.collapsible-section > .collapsible-body {
 }
 
 .multi-liability-options legend {
-  font-weight: bold;
+  font-weight: 600;
   color: #333;
   padding: 0;
   margin-bottom: 6px;
@@ -530,50 +755,35 @@ details.collapsible-section > .collapsible-body {
 .cluster-controls {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-bottom: 12px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 .cluster-controls label {
-  font-size: 0.9em;
-  font-weight: bold;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text);
 }
 
 .cluster-controls input[type="number"] {
-  font-family: 'Courier New', Courier, monospace;
+  font-family: var(--font-mono);
   font-size: 13px;
-  width: 60px;
-  padding: 4px 6px;
-  border: 1px solid #ccc;
-  border-radius: 3px;
+  width: 64px;
+  padding: 6px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
 }
 
-.cluster-panel {
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.cluster-panel > summary.panel-summary {
-  font-size: 1.2em;
-  margin-bottom: 12px;
-  color: #333;
-  text-align: center;
-}
-
-.msa-section-title {
-  font-size: 0.9em;
-  font-weight: bold;
-  color: #555;
-  margin: 32px 0 6px 0;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 3px;
-}
-
-details.collapsible-section > summary.msa-section-title {
-  color: #555;
+.cluster-controls input[type="number"]:focus {
+  outline: 2px solid var(--accent-soft);
+  border-color: var(--accent);
 }
 
 .cluster-panel > .collapsible-panel-body > details.collapsible-section ~ details.collapsible-section > summary.msa-section-title {
@@ -581,6 +791,7 @@ details.collapsible-section > summary.msa-section-title {
 }
 
 .conservation-row {
+  font-family: var(--font-mono);
   white-space: pre;
   font-size: 13px;
   line-height: 1.35;
@@ -599,17 +810,16 @@ details.collapsible-section > summary.msa-section-title {
 .msa-label { width: 16ch; }
 
 .basket-status {
-  font-size: 0.85em;
-  color: #22aa44;
-  margin-left: 8px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--success);
+  margin-left: 4px;
   opacity: 1;
   transition: opacity 0.5s;
 }
 
-.basket-count {
-  font-size: 0.85em;
-  color: #555;
-  margin-left: auto;
+.multi-liability-options:empty {
+  display: none;
 }
 
 @media (max-width: 768px) {
@@ -620,58 +830,63 @@ details.collapsible-section > summary.msa-section-title {
 
 .site-footer {
   max-width: 1400px;
-  margin: 32px auto 0;
-  padding: 16px 24px 24px;
-  font-size: 0.85em;
-  color: #666;
-  border-top: 1px solid #ddd;
+  margin: 28px auto 0;
+  padding: 20px 24px 28px;
+  font-size: 0.8125rem;
+  color: var(--text-hint);
+  border-top: 1px solid var(--border-strong);
   line-height: 1.5;
   text-align: center;
 }
 
 .site-footer a {
-  color: #2266cc;
-  text-decoration: underline;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
 }
 
 .site-footer a:hover {
-  color: #174a99;
+  text-decoration: underline;
+  color: var(--accent-hover);
 }
 </style>
 </head>
 <body>
 <div class="container">
-  <h1>mAb Sequence Analysis</h1>
+  <header class="app-header">
+    <h1>LAMBS - Local Analysis of mAb Sequences</h1>
+  </header>
 
-  <div class="tab-bar">
+  <div class="app-shell">
+  <nav class="tab-bar" aria-label="Analysis mode">
     <button class="tab-btn active" data-tab="single">Single mAb Analysis</button>
     <button class="tab-btn" data-tab="multi">Multiple mAb Analysis</button>
-  </div>
+  </nav>
 
   <div id="tab-single" class="tab-panel">
 
-    <div class="input-section">
+    <div class="input-section tab-panel-block">
       <div class="input-row">
         <div class="input-group">
           <label for="vh-input">VH / Heavy Chain Sequence</label>
-          <p style="font-size:0.85em;color:#888">
+          <p class="text-hint">
             Supported formats: amino acid sequence or FASTA.
           </p>
           <textarea id="vh-input" rows="3" placeholder="Paste VH amino acid sequence (or FASTA)..."></textarea>
         </div>
         <div class="input-group">
           <label for="vl-input">VL / Light Chain Sequence</label>
-          <p style="font-size:0.85em;color:#888">
+          <p class="text-hint">
             Supported formats: amino acid sequence or FASTA.
           </p>
           <textarea id="vl-input" rows="3" placeholder="Paste VL amino acid sequence (or FASTA)..."></textarea>
         </div>
       </div>
       <div class="controls-row">
-        <button id="analyze-btn">Analyze</button>
+        <button id="analyze-btn" class="btn btn-primary btn-lg">Analyze</button>
         <button id="add-to-basket-btn" class="btn btn-secondary">Add to Basket</button>
         <span id="basket-status" class="basket-status" style="display:none"></span>
-        <span id="load-example-single-link" style="font-size:0.85em;color:#888;display:none">(<a href="#" onclick="loadExampleSingle();return false;" style="color:#2266cc;text-decoration:underline;cursor:pointer">load an example set</a>)</span>
+        <span id="load-example-single-link" class="text-hint" style="display:none">(<a href="#" onclick="loadExampleSingle();return false;">load an example set</a>)</span>
       </div>
     </div>
 
@@ -726,16 +941,16 @@ details.collapsible-section > summary.msa-section-title {
 
   <div id="tab-multi" class="tab-panel" style="display:none">
 
-    <div class="basket-section">
-      <h3>Sequence Basket</h3>
+    <div class="basket-section tab-panel-block">
+      <h3 class="card-title">Sequence Basket</h3>
       <div class="basket-upload-row">
         <label>Upload CSV:</label>
         <input type="file" id="csv-upload" accept=".csv,.txt" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);opacity:0">
         <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('csv-upload').click()">Choose File</button>
-        <span id="csv-status" style="font-size:0.85em;color:#888"></span>
-        <span id="load-example-link" style="font-size:0.85em;color:#888;display:none">(<a href="#" onclick="loadExampleCSV();return false;" style="color:#2266cc;text-decoration:underline;cursor:pointer">load an example set</a>)</span>
+        <span id="csv-status" class="text-hint"></span>
+        <span id="load-example-link" class="text-hint" style="display:none">(<a href="#" onclick="loadExampleCSV();return false;">load an example set</a>)</span>
       </div>
-      <p style="font-size:0.85em;color:#888">
+      <p class="text-hint">
         CSV format expects 3 columns (case-insensitive, any order): <b>Name, Heavy, Light</b> (full-length or Fv-only).
       </p>
       <div class="basket-table-wrap">
@@ -748,7 +963,6 @@ details.collapsible-section > summary.msa-section-title {
       </div>
       <div class="basket-actions">
         <button id="clear-basket-btn" class="btn btn-danger btn-sm" disabled>Clear All</button>
-        <span class="basket-count"><span id="basket-count-num">0</span> sequence(s)</span>
       </div>
     </div>
 
@@ -764,6 +978,7 @@ details.collapsible-section > summary.msa-section-title {
 
   </div>
 
+  </div>
 </div>
 
 <footer class="site-footer" role="contentinfo">
@@ -3225,7 +3440,8 @@ function buildGermlineAlignmentContext(germ, cdr3) {
   return { a1, a2, alen, rawToAligned, labelChars, pipeChars };
 }
 
-function renderGermlineIdentificationTableHtml(germ, jHit) {
+function renderGermlineIdentificationTableHtml(germ, jHit, identityHeader) {
+  const identCol = identityHeader || 'Identity';
   const fmtSpecies = function(hit) {
     return hit.species.charAt(0).toUpperCase() + hit.species.slice(1);
   };
@@ -3238,7 +3454,7 @@ function renderGermlineIdentificationTableHtml(germ, jHit) {
 
   let t = '<table class="props-table">';
   t += '<thead><tr>';
-  t += '<th>Gene</th><th>Best Match</th><th>Species</th><th class="num">Identity</th><th></th>';
+  t += '<th>Gene</th><th>Best Match</th><th>Species</th><th class="num">' + escapeHtml(identCol) + '</th><th></th>';
   t += '</tr></thead><tbody>';
 
   // V gene row — always present when this function is called
@@ -3386,8 +3602,8 @@ function buildMergedGermlineA2(ctx, jHit) {
 }
 
 /**
- * Cluster MSA only: germline summary + CDR markers + germline row + mismatch row, expanded to
- * MSA column width (aligned with consensus). No liabilities, no second ruler.
+ * Cluster MSA only: CDR markers + germline row + mismatch row, expanded to MSA column width.
+ * Germline V/J table is rendered separately (see renderMsaGermlineIdentificationHtml).
  */
 function renderGermlineMsaOverlayHtml(consensusMsa, chainType, lbl) {
   const seq = consensusSequenceForAnalysis(consensusMsa);
@@ -3398,7 +3614,7 @@ function renderGermlineMsaOverlayHtml(consensusMsa, chainType, lbl) {
   const cdr3 = detectCDR3(seq, chainType);
   const jHit = findClosestJGene(seq, chainType);
   const ctx = buildGermlineAlignmentContext(germ, cdr3);
-  let html = renderGermlineIdentificationTableHtml(germ, jHit);
+  let html = '';
   const a2Merged = buildMergedGermlineA2(ctx, jHit);
   const colSpecMsa = { type: 'msa', consensusMsa, rawToAligned: ctx.rawToAligned };
   if (germ.cdr1 || germ.cdr2 || cdr3) {
@@ -3407,6 +3623,16 @@ function renderGermlineMsaOverlayHtml(consensusMsa, chainType, lbl) {
   html += renderGermlineGeneRowHtml(lbl, { gene: 'Germline' }, a2Merged, colSpecMsa);
   html += renderGermlineMismatchRowHtml(lbl, ctx.a1, a2Merged, colSpecMsa);
   return html;
+}
+
+/** V/J identification table for cluster MSA (consensus or single-sequence column string). */
+function renderMsaGermlineIdentificationHtml(consensusOrMsa, chainType) {
+  const seq = consensusSequenceForAnalysis(consensusOrMsa);
+  if (!seq) return '';
+  const germ = findClosestGermline(seq, chainType);
+  if (!germ) return '';
+  const jHit = findClosestJGene(seq, chainType);
+  return '<div class="msa-germline-id">' + renderGermlineIdentificationTableHtml(germ, jHit, 'Consensus Identity') + '</div>';
 }
 
 /**
@@ -3602,12 +3828,10 @@ function clearBasket() {
 
 function renderBasket() {
   const tbody = document.getElementById('basket-tbody');
-  const countEl = document.getElementById('basket-count-num');
   const clearBtn = document.getElementById('clear-basket-btn');
   const clusterBtn = document.getElementById('cluster-btn');
   const exampleLink = document.getElementById('load-example-link');
 
-  countEl.textContent = basket.length;
   clearBtn.disabled = basket.length === 0;
   clusterBtn.disabled = basket.length === 0;
   if (exampleLink) exampleLink.style.display = basket.length === 0 ? '' : 'none';
@@ -3620,10 +3844,14 @@ function renderBasket() {
   let html = '';
   for (let i = 0; i < basket.length; i++) {
     const e = basket[i];
-    const vhPrev = e.vh ? e.vh.substring(0, 30) + (e.vh.length > 30 ? '...' : '') : '<em style="color:#aaa">none</em>';
-    const vlPrev = e.vl ? e.vl.substring(0, 30) + (e.vl.length > 30 ? '...' : '') : '<em style="color:#aaa">none</em>';
+    const vhPrev = e.vh
+      ? '<span class="seq-preview">' + escapeHtml(e.vh.substring(0, 30) + (e.vh.length > 30 ? '...' : '')) + '</span>'
+      : '<em style="color:#aaa">none</em>';
+    const vlPrev = e.vl
+      ? '<span class="seq-preview">' + escapeHtml(e.vl.substring(0, 30) + (e.vl.length > 30 ? '...' : '')) + '</span>'
+      : '<em style="color:#aaa">none</em>';
     html += '<tr>' +
-      '<td>' + (i + 1) + '</td>' +
+      '<td class="num">' + (i + 1) + '</td>' +
       '<td>' + escapeHtml(e.name) + '</td>' +
       '<td>' + vhPrev + '</td>' +
       '<td>' + vlPrev + '</td>' +
@@ -4199,10 +4427,12 @@ function renderChainMSA(members, chainKey, chainLabel, highlightNames) {
 
   const lbl = 'msa-label';
   const alignTitle = chainLabel + ' Alignment';
+  let bodyHtml = '';
   let trackHtml = '<div class="track-block">';
 
   if (seqs.length === 1) {
     const one = seqs[0];
+    bodyHtml += renderMsaGermlineIdentificationHtml(one, chainType);
     trackHtml += renderRulerRow(one.length, lbl);
     trackHtml += renderGermlineMsaOverlayHtml(one, chainType, lbl);
     trackHtml += renderMSARow(one, names[0], lbl, highlightNames);
@@ -4210,6 +4440,7 @@ function renderChainMSA(members, chainKey, chainLabel, highlightNames) {
     const msaSeqs = starMSA(seqs);
     const cons = computeConservation(msaSeqs);
 
+    bodyHtml += renderMsaGermlineIdentificationHtml(cons.consensus, chainType);
     trackHtml += renderRulerRow(msaSeqs[0].length, lbl);
     trackHtml += renderGermlineMsaOverlayHtml(cons.consensus, chainType, lbl);
     trackHtml += renderConsensusRow(cons.consensus, lbl);
@@ -4220,8 +4451,9 @@ function renderChainMSA(members, chainKey, chainLabel, highlightNames) {
   }
 
   trackHtml += '</div>';
+  bodyHtml += trackHtml;
 
-  return collapsibleSectionHtml(alignTitle, trackHtml, true, 'msa');
+  return collapsibleSectionHtml(alignTitle, bodyHtml, true, 'msa');
 }
 
 function constantRegionKindLabel(match) {
@@ -4236,18 +4468,6 @@ function constantRegionIdentityLabel(match) {
   return pct + '% (' + match.matches + '/' + match.total + ' positions)';
 }
 
-function jGeneLabel(jHit) {
-  if (!jHit) return '--';
-  const speciesLabel = jHit.species.charAt(0).toUpperCase() + jHit.species.slice(1);
-  return escapeHtml(speciesLabel + ' ' + jHit.gene);
-}
-
-function jGeneIdentityLabel(jHit) {
-  if (!jHit) return '--';
-  const pct = (jHit.identity * 100).toFixed(1);
-  return pct + '% (' + jHit.matches + '/' + jHit.total + ' positions)';
-}
-
 function renderConstantRegionTableHtml(members) {
   let anyFound = false;
   const rows = members.map(function(m) {
@@ -4255,22 +4475,13 @@ function renderConstantRegionTableHtml(members) {
     const vlHit = m.vl ? findConstantRegion(m.vl) : null;
     const ch = vhHit && vhHit.regionKind === 'CH' ? vhHit : null;
     const cl = vlHit && vlHit.regionKind === 'CL' ? vlHit : null;
-    // J gene lookup uses the variable region only (constant region stripped)
-    const vhVar = vhHit ? m.vh.substring(0, vhHit.splitPos) : (m.vh || '');
-    const vlVar = vlHit ? m.vl.substring(0, vlHit.splitPos) : (m.vl || '');
-    const vhJ = vhVar ? findClosestJGene(vhVar, 'VH') : null;
-    const vlJ = vlVar ? findClosestJGene(vlVar, 'VL') : null;
-    if (ch || cl || vhJ || vlJ) anyFound = true;
+    if (ch || cl) anyFound = true;
     return {
       name: m.name,
       chKind: constantRegionKindLabel(ch),
       chIdent: constantRegionIdentityLabel(ch),
       clKind: constantRegionKindLabel(cl),
       clIdent: constantRegionIdentityLabel(cl),
-      vhJKind: jGeneLabel(vhJ),
-      vhJIdent: jGeneIdentityLabel(vhJ),
-      vlJKind: jGeneLabel(vlJ),
-      vlJIdent: jGeneIdentityLabel(vlJ),
     };
   });
   if (!anyFound) return '';
@@ -4282,10 +4493,6 @@ function renderConstantRegionTableHtml(members) {
     '<th style="text-align:left">CH identity</th>' +
     '<th style="text-align:left">CL</th>' +
     '<th style="text-align:left">CL identity</th>' +
-    '<th style="text-align:left">VH J</th>' +
-    '<th style="text-align:left">VH J identity</th>' +
-    '<th style="text-align:left">VL J</th>' +
-    '<th style="text-align:left">VL J identity</th>' +
     '</tr></thead>';
   tableHtml += '<tbody>';
   for (let i = 0; i < rows.length; i++) {
@@ -4296,14 +4503,10 @@ function renderConstantRegionTableHtml(members) {
       '<td style="vertical-align:top">' + r.chIdent + '</td>' +
       '<td style="vertical-align:top">' + r.clKind + '</td>' +
       '<td style="vertical-align:top">' + r.clIdent + '</td>' +
-      '<td style="vertical-align:top">' + r.vhJKind + '</td>' +
-      '<td style="vertical-align:top">' + r.vhJIdent + '</td>' +
-      '<td style="vertical-align:top">' + r.vlJKind + '</td>' +
-      '<td style="vertical-align:top">' + r.vlJIdent + '</td>' +
       '</tr>';
   }
   tableHtml += '</tbody></table>';
-  return collapsibleSectionHtml('Constant Region & J Gene', tableHtml, true, 'msa');
+  return collapsibleSectionHtml('Constant Region', tableHtml, true, 'msa');
 }
 
 function renderClusterResults(clusters, highlightNames) {
