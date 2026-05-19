@@ -66,6 +66,8 @@ pnpm install
 pnpm release
 # for feature releases pre-v1.0
 pnpm release --release-as minor
+# push tags
+git push origin --tags
 ```
 
 Adding release notes to the GitHub release (also remember to add `index.html` to the release assets):
