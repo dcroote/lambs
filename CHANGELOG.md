@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.0](https://github.com/dcroote/lambs/compare/v0.9.0...v0.10.0) (2026-05-20)
+
+
+### Features
+
+* add public API for agent use of LAMBS ([0a03f52](https://github.com/dcroote/lambs/commit/0a03f52ec7ac0c8d0c857b1ca87c8fc99fee823a))
+
 ## [0.9.0](https://github.com/dcroote/lambs/compare/v0.8.0...v0.9.0) (2026-05-20)
 
 
