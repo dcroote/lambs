@@ -91,6 +91,14 @@ const wrappedJS = `
   exports.J_GENE_DB = J_GENE_DB;
   exports.buildGermlineAlignmentContext = buildGermlineAlignmentContext;
   exports.buildMergedGermlineA2 = buildMergedGermlineA2;
+  exports.LAMBS_REPORT_VERSION = LAMBS_REPORT_VERSION;
+  exports.buildChainReport = buildChainReport;
+  exports.buildChainPanelReport = buildChainPanelReport;
+  exports.analyzeMabReport = analyzeMabReport;
+  exports.analyzeMabReportFromRaw = analyzeMabReportFromRaw;
+  exports.buildClusterReport = buildClusterReport;
+  exports.lambsReportToJSON = lambsReportToJSON;
+  exports.LIABILITY_ORDER = LIABILITY_ORDER;
 })(this);
 `;
 const ctx = {};
@@ -139,6 +147,14 @@ const {
   J_GENE_DB,
   buildGermlineAlignmentContext,
   buildMergedGermlineA2,
+  LAMBS_REPORT_VERSION,
+  buildChainReport,
+  buildChainPanelReport,
+  analyzeMabReport,
+  analyzeMabReportFromRaw,
+  buildClusterReport,
+  lambsReportToJSON,
+  LIABILITY_ORDER,
 } = ctx;
 
 // --- Test harness ---
@@ -3189,6 +3205,48 @@ assert(
   bmgMerged.slice(0, 70) === bmgCtx.a2.slice(0, 70),
   "buildMergedGermlineA2: V gene framework region (first 70 positions) unchanged from ctx.a2",
 );
+
+// ============================================================
+// Structured reports (Tier 2 agent API)
+// ============================================================
+section("buildChainReport / analyzeMabReport");
+
+assert(LAMBS_REPORT_VERSION === 1, "LAMBS_REPORT_VERSION is 1");
+
+const chainRep = buildChainReport(VH, "VH");
+assert(chainRep.chainType === "VH", "buildChainReport chainType");
+assert(chainRep.sequence === VH, "buildChainReport sequence");
+assert(chainRep.properties.length === VH.length, "buildChainReport properties.length");
+assert(chainRep.germline.vGene && chainRep.germline.vGene.gene, "buildChainReport vGene");
+assert(Array.isArray(chainRep.liabilities), "buildChainReport liabilities array");
+assert(
+  !JSON.stringify(chainRep).includes("aligned1"),
+  "buildChainReport JSON has no alignment strings",
+);
+
+const mabRep = analyzeMabReport(VH, VL);
+assert(mabRep.reportVersion === 1 && mabRep.kind === "single-mab", "analyzeMabReport meta");
+assert(mabRep.chains.vh && mabRep.chains.vl, "analyzeMabReport both chains");
+const mabJson = lambsReportToJSON(mabRep);
+assert(!mabJson.includes("_constMatch"), "lambsReportToJSON strips _constMatch");
+assert(!mabJson.includes("aligned1"), "lambsReportToJSON strips alignments");
+
+const rawBad = analyzeMabReportFromRaw("EVQ1", VL);
+assert(!rawBad.ok && rawBad.errors.vh, "analyzeMabReportFromRaw validation");
+
+const rawOk = analyzeMabReportFromRaw(VH, VL);
+assert(rawOk.ok && rawOk.report.kind === "single-mab", "analyzeMabReportFromRaw success");
+
+section("buildClusterReport");
+
+const basketFixture = [
+  { id: 1, name: "A", vh: VH, vl: VL },
+  { id: 2, name: "B", vh: VH, vl: VL },
+];
+const clusterRep = buildClusterReport(basketFixture, 70, []);
+assert(clusterRep.kind === "cluster" && clusterRep.clusterCount >= 1, "buildClusterReport kind");
+assert(clusterRep.clusters[0].vh.consensusAnalysis, "cluster consensusAnalysis");
+assert(clusterRep.clusters[0].members.length === 2, "cluster member count");
 
 // ============================================================
 // Summary

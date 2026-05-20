@@ -884,6 +884,7 @@ details.collapsible-section > .collapsible-body {
       </div>
       <div class="controls-row">
         <button id="analyze-btn" class="btn btn-primary btn-lg">Analyze</button>
+        <button id="copy-json-btn" class="btn btn-secondary" style="display:none" type="button">Copy JSON</button>
         <button id="add-to-basket-btn" class="btn btn-secondary">Add to Basket</button>
         <span id="basket-status" class="basket-status" style="display:none"></span>
         <span id="load-example-single-link" class="text-hint" style="display:none">(<a href="#" onclick="loadExampleSingle();return false;">load an example set</a>)</span>
@@ -891,6 +892,7 @@ details.collapsible-section > .collapsible-body {
     </div>
 
     <div id="results"></div>
+    <script type="application/json" id="lambs-last-report"></script>
 
     <div id="legend" class="legend" style="display:none">
       <h3>Legend</h3>
@@ -970,11 +972,13 @@ details.collapsible-section > .collapsible-body {
       <label for="cluster-threshold">Cluster identity threshold (%, combined heavy + light variable regions):</label>
       <input type="number" id="cluster-threshold" value="70" min="1" max="100" step="1">
       <button id="cluster-btn" class="btn btn-primary" disabled>Cluster &amp; Analyze</button>
+      <button id="copy-cluster-json-btn" class="btn btn-secondary" style="display:none" type="button">Copy JSON</button>
     </div>
 
     <div id="msa-liability-options" class="multi-liability-options" aria-label="MSA liability options"></div>
 
     <div id="multi-results"></div>
+    <script type="application/json" id="lambs-last-cluster-report"></script>
 
   </div>
 
@@ -3744,55 +3748,228 @@ function renderConstantRegionPanel(constMatch, chainLabel) {
 }
 
 // ================================================================
+// STRUCTURED REPORTS (single mAb + agents / JSON)
+// ================================================================
+
+const LAMBS_REPORT_VERSION = 1;
+
+function summarizeAlignmentHit(hit) {
+  if (!hit) return null;
+  return {
+    gene: hit.gene,
+    species: hit.species,
+    identity: hit.identity,
+    matches: hit.matches,
+    total: hit.total
+  };
+}
+
+function summarizeVGeneHit(germ) {
+  if (!germ) return null;
+  const s = summarizeAlignmentHit(germ);
+  s.cdr1 = germ.cdr1 || null;
+  s.cdr2 = germ.cdr2 || null;
+  return s;
+}
+
+function summarizeConstantRegion(match) {
+  if (!match) return null;
+  return {
+    isotype: match.isotype,
+    species: match.species,
+    regionKind: match.regionKind,
+    identity: match.identity,
+    matches: match.matches,
+    total: match.total,
+    splitPos: match.splitPos
+  };
+}
+
+function summarizeCDR3(cdr3Range, seq) {
+  if (!cdr3Range) return null;
+  const start = cdr3Range[0];
+  const end = cdr3Range[1];
+  return {
+    start: start,
+    end: end,
+    length: end - start + 1,
+    sequence: seq.substring(start, end + 1)
+  };
+}
+
+function liabilitiesToReportArray(liabilitiesObj) {
+  const arr = [];
+  for (let i = 0; i < LIABILITY_ORDER_ACTIVE.length; i++) {
+    const name = LIABILITY_ORDER_ACTIVE[i];
+    if (liabilitiesObj[name]) {
+      arr.push({ type: name, positions: liabilitiesObj[name].slice() });
+    }
+  }
+  return arr;
+}
+
+function buildPropertiesReport(seq, chainType) {
+  const p = computeSequenceProperties(seq);
+  const ref = APPROVED_MAB_STATS[chainType] || null;
+  const out = {
+    length: p.length,
+    mw: p.mw,
+    pI: p.pI,
+    charge74: p.charge74,
+    charge55: p.charge55,
+    gravy: p.gravy
+  };
+  if (ref) {
+    out.reference = { n: ref.n, chainType: chainType };
+    out.percentiles = {};
+    out.quartiles = {};
+    const keys = ['length', 'mw', 'pI', 'charge74', 'charge55', 'gravy'];
+    for (let k = 0; k < keys.length; k++) {
+      const key = keys[k];
+      const dist = ref[key];
+      if (!dist) continue;
+      out.percentiles[key] = calcPercentile(dist.values, p[key]);
+      out.quartiles[key] = { q1: dist.q1, q2: dist.q2, q3: dist.q3 };
+    }
+  }
+  return out;
+}
+
+/** Variable-region chain analysis as a JSON-safe object (no alignment strings). */
+function buildChainReport(seq, chainType) {
+  const germ = findClosestGermline(seq, chainType);
+  const jHit = findClosestJGene(seq, chainType);
+  const cdr3Range = detectCDR3(seq, chainType);
+  const liabilitiesRaw = detectLiabilities(seq);
+  return {
+    chainType: chainType,
+    sequence: seq,
+    properties: buildPropertiesReport(seq, chainType),
+    germline: {
+      vGene: summarizeVGeneHit(germ),
+      jGene: summarizeAlignmentHit(jHit),
+      cdr3: summarizeCDR3(cdr3Range, seq)
+    },
+    liabilities: liabilitiesToReportArray(liabilitiesRaw)
+  };
+}
+
+/** Full chain (variable + constant summary). `_constMatch` is for HTML render only. */
+function buildChainPanelReport(fullSeq, chainType) {
+  const constMatch = findConstantRegion(fullSeq);
+  const varSeq = constMatch ? fullSeq.substring(0, constMatch.splitPos) : fullSeq;
+  return {
+    chainType: chainType,
+    fullSequence: fullSeq,
+    variable: buildChainReport(varSeq, chainType),
+    constantRegion: summarizeConstantRegion(constMatch),
+    _constMatch: constMatch
+  };
+}
+
+function analyzeMabReport(vhSeq, vlSeq) {
+  const report = {
+    reportVersion: LAMBS_REPORT_VERSION,
+    kind: 'single-mab',
+    chains: {}
+  };
+  if (vhSeq) report.chains.vh = buildChainPanelReport(vhSeq, 'VH');
+  if (vlSeq) report.chains.vl = buildChainPanelReport(vlSeq, 'VL');
+  return report;
+}
+
+function analyzeMabReportFromRaw(vhRaw, vlRaw) {
+  const vhTrim = (vhRaw || '').trim();
+  const vlTrim = (vlRaw || '').trim();
+  const vhErr = validateSequence(vhTrim);
+  const vlErr = validateSequence(vlTrim);
+  if (vhErr || vlErr) {
+    return { ok: false, errors: { vh: vhErr, vl: vlErr } };
+  }
+  const vhSeq = cleanSequence(vhTrim);
+  const vlSeq = cleanSequence(vlTrim);
+  if (!vhSeq && !vlSeq) {
+    return { ok: false, errors: { message: 'Please enter at least one sequence.' } };
+  }
+  return { ok: true, report: analyzeMabReport(vhSeq, vlSeq) };
+}
+
+function lambsReportToJSON(report) {
+  return JSON.stringify(report, function(key, val) {
+    if (key === '_constMatch') return undefined;
+    return val;
+  });
+}
+
+function renderChainPanelFromReport(panelReport) {
+  const seq = panelReport.variable.sequence;
+  let html = renderChainPanel(seq, panelReport.chainType);
+  if (panelReport._constMatch) {
+    html += renderConstantRegionPanel(panelReport._constMatch, panelReport._constMatch.regionKind);
+  }
+  return html;
+}
+
+function renderMabReportHtml(report) {
+  let html = '';
+  if (report.chains.vh) html += renderChainPanelFromReport(report.chains.vh);
+  if (report.chains.vl) html += renderChainPanelFromReport(report.chains.vl);
+  return html;
+}
+
+function setLastSingleReport(report) {
+  if (typeof window !== 'undefined' && window.LAMBS) {
+    window.LAMBS.lastReport = report;
+  }
+  const el = document.getElementById('lambs-last-report');
+  if (el) {
+    if (report) {
+      const json = lambsReportToJSON(report);
+      el.textContent = json;
+      el.dataset.json = json;
+    } else {
+      el.textContent = '';
+      delete el.dataset.json;
+    }
+  }
+  const copyBtn = document.getElementById('copy-json-btn');
+  if (copyBtn) copyBtn.style.display = report ? '' : 'none';
+}
+
+// ================================================================
 // MAIN ANALYSIS
 // ================================================================
 
 function analyze() {
-  const vhRaw = document.getElementById('vh-input').value.trim();
-  const vlRaw = document.getElementById('vl-input').value.trim();
-
-  const vhErr = validateSequence(vhRaw);
-  const vlErr = validateSequence(vlRaw);
-  if (vhErr || vlErr) {
-    const msgs = [vhErr && ('VH: ' + vhErr), vlErr && ('VL: ' + vlErr)].filter(Boolean);
-    document.getElementById('results').innerHTML =
-      '<div class="no-data" style="color:#c0392b">' + msgs.map(escapeHtml).join('<br>') + '</div>';
-    document.getElementById('results').style.display = '';
-    document.getElementById('legend').style.display = 'none';
-    return;
-  }
-
-  const vhSeq = cleanSequence(vhRaw);
-  const vlSeq = cleanSequence(vlRaw);
-
-  if (!vhSeq && !vlSeq) {
-    document.getElementById('results').innerHTML =
-      '<div class="no-data">Please enter at least one sequence.</div>';
-    document.getElementById('results').style.display = '';
-    document.getElementById('legend').style.display = 'none';
-    return;
-  }
-
-  let html = '';
-  if (vhSeq) {
-    const vhConst = findConstantRegion(vhSeq);
-    const vhVar = vhConst ? vhSeq.substring(0, vhConst.splitPos) : vhSeq;
-    html += renderChainPanel(vhVar || vhSeq, 'VH');
-    if (vhConst) html += renderConstantRegionPanel(vhConst, vhConst.regionKind);
-  }
-  if (vlSeq) {
-    const vlConst = findConstantRegion(vlSeq);
-    const vlVar = vlConst ? vlSeq.substring(0, vlConst.splitPos) : vlSeq;
-    html += renderChainPanel(vlVar || vlSeq, 'VL');
-    if (vlConst) html += renderConstantRegionPanel(vlConst, vlConst.regionKind);
-  }
+  const result = analyzeMabReportFromRaw(
+    document.getElementById('vh-input').value,
+    document.getElementById('vl-input').value
+  );
 
   const resultsEl = document.getElementById('results');
-  resultsEl.innerHTML = html;
+  if (!result.ok) {
+    if (result.errors.message) {
+      resultsEl.innerHTML =
+        '<div class="no-data">' + escapeHtml(result.errors.message) + '</div>';
+    } else {
+      const msgs = [
+        result.errors.vh && ('VH: ' + result.errors.vh),
+        result.errors.vl && ('VL: ' + result.errors.vl)
+      ].filter(Boolean);
+      resultsEl.innerHTML =
+        '<div class="no-data" style="color:#c0392b">' + msgs.map(escapeHtml).join('<br>') + '</div>';
+    }
+    resultsEl.style.display = '';
+    document.getElementById('legend').style.display = 'none';
+    setLastSingleReport(null);
+    return;
+  }
+
+  setLastSingleReport(result.report);
+  resultsEl.innerHTML = renderMabReportHtml(result.report);
   resultsEl.style.display = '';
   document.getElementById('legend').style.display = '';
 
-  // Respect current toggle state
   if (document.getElementById('aa-color-toggle').checked) {
     resultsEl.classList.add('aa-coloring');
   } else {
@@ -4084,6 +4261,141 @@ function clusterSequences(entries, threshold) {
 
   clusters.sort(function(a, b) { return b.members.length - a.members.length; });
   return clusters;
+}
+
+function variableRegionSequence(seq) {
+  if (!seq) return '';
+  const cr = findConstantRegion(seq);
+  return cr ? seq.substring(0, cr.splitPos) : seq;
+}
+
+function buildClusterChainSummary(members, chainKey, chainType) {
+  const seqs = [];
+  const names = [];
+  for (let i = 0; i < members.length; i++) {
+    const raw = members[i][chainKey];
+    if (raw) {
+      seqs.push(variableRegionSequence(raw));
+      names.push(members[i].name);
+    }
+  }
+  if (seqs.length === 0) return null;
+
+  let msaSeqs = seqs;
+  let consensusRaw = seqs[0];
+  let conservation = null;
+  if (seqs.length > 1) {
+    msaSeqs = starMSA(seqs);
+    const cons = computeConservation(msaSeqs);
+    consensusRaw = cons.consensus;
+    conservation = { perColumnIdentity: cons.identity };
+  }
+  const consensus = consensusSequenceForAnalysis(consensusRaw);
+  return {
+    chainType: chainType,
+    memberNames: names,
+    variableSequences: seqs,
+    msaColumnCount: msaSeqs[0] ? msaSeqs[0].length : 0,
+    consensus: consensus,
+    consensusAnalysis: buildChainReport(consensus, chainType),
+    conservation: conservation
+  };
+}
+
+function buildConstantRegionMemberRows(members) {
+  const rows = members.map(function(m) {
+    const vhHit = m.vh ? findConstantRegion(m.vh) : null;
+    const vlHit = m.vl ? findConstantRegion(m.vl) : null;
+    const ch = vhHit && vhHit.regionKind === 'CH' ? vhHit : null;
+    const cl = vlHit && vlHit.regionKind === 'CL' ? vlHit : null;
+    const vhVar = vhHit ? m.vh.substring(0, vhHit.splitPos) : (m.vh || '');
+    const vlVar = vlHit ? m.vl.substring(0, vlHit.splitPos) : (m.vl || '');
+    const vhJ = vhVar ? findClosestJGene(vhVar, 'VH') : null;
+    const vlJ = vlVar ? findClosestJGene(vlVar, 'VL') : null;
+    return {
+      name: m.name,
+      ch: summarizeConstantRegion(ch),
+      cl: summarizeConstantRegion(cl),
+      vhJGene: summarizeAlignmentHit(vhJ),
+      vlJGene: summarizeAlignmentHit(vlJ)
+    };
+  });
+  const anyFound = rows.some(function(r) {
+    return r.ch || r.cl || r.vhJGene || r.vlJGene;
+  });
+  return anyFound ? rows : null;
+}
+
+function buildClusterReport(basket, threshold, filterNames) {
+  const filters = filterNames || [];
+  const entries = filterBasketByLiabilityFilters(basket, filters);
+  const clusters = clusterSequences(entries, threshold);
+  return {
+    reportVersion: LAMBS_REPORT_VERSION,
+    kind: 'cluster',
+    thresholdPercent: threshold,
+    liabilityFilters: filters.slice(),
+    inputCount: basket.length,
+    filteredCount: entries.length,
+    clusterCount: clusters.length,
+    clusters: clusters.map(function(cl, idx) {
+      return {
+        index: idx + 1,
+        size: cl.members.length,
+        representativeName: cl.rep.name,
+        members: cl.members.map(function(m) {
+          return {
+            name: m.name,
+            vh: m.vh ? buildChainPanelReport(m.vh, 'VH') : null,
+            vl: m.vl ? buildChainPanelReport(m.vl, 'VL') : null
+          };
+        }),
+        vh: buildClusterChainSummary(cl.members, 'vh', 'VH'),
+        vl: buildClusterChainSummary(cl.members, 'vl', 'VL'),
+        constantRegions: buildConstantRegionMemberRows(cl.members)
+      };
+    })
+  };
+}
+
+function setLastClusterReport(report) {
+  if (typeof window !== 'undefined' && window.LAMBS) {
+    window.LAMBS.lastClusterReport = report;
+  }
+  const el = document.getElementById('lambs-last-cluster-report');
+  if (el) {
+    if (report) {
+      const json = lambsReportToJSON(report);
+      el.textContent = json;
+      el.dataset.json = json;
+    } else {
+      el.textContent = '';
+      delete el.dataset.json;
+    }
+  }
+  const copyBtn = document.getElementById('copy-cluster-json-btn');
+  if (copyBtn) copyBtn.style.display = report ? '' : 'none';
+}
+
+function copyLambsReportJson(copyBtnId, reportElId) {
+  const el = document.getElementById(reportElId);
+  const json = el && el.dataset.json;
+  if (!json) return;
+  const btn = document.getElementById(copyBtnId);
+  function copied() {
+    if (!btn) return;
+    const prev = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(function() { btn.textContent = prev; }, 1500);
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(json).then(copied).catch(function() {
+      window.prompt('Copy report JSON:', json);
+    });
+  } else {
+    window.prompt('Copy report JSON:', json);
+    copied();
+  }
 }
 
 // ================================================================
@@ -4551,12 +4863,15 @@ function runMultiAnalysis() {
   const resultsEl = document.getElementById('multi-results');
   if (basket.length === 0) {
     lastClusters = null;
+    setLastClusterReport(null);
     if (resultsEl) resultsEl.innerHTML = '';
     return;
   }
 
   const nameErr = validateBasketNames(basket);
   if (nameErr) {
+    lastClusters = null;
+    setLastClusterReport(null);
     resultsEl.innerHTML = '<div class="no-data" style="color:#c0392b">' + escapeHtml(nameErr) + '</div>';
     return;
   }
@@ -4566,6 +4881,7 @@ function runMultiAnalysis() {
   const highlightNames = readMsaLiabilityCheckboxState('hl');
   const entriesForCluster = filterBasketByLiabilityFilters(basket, filterNames);
   lastClusters = clusterSequences(entriesForCluster, threshold);
+  setLastClusterReport(buildClusterReport(basket, threshold, filterNames));
 
   resultsEl.innerHTML = renderClusterResults(lastClusters, highlightNames);
   applyMsaAaColoring(resultsEl);
@@ -4611,6 +4927,14 @@ function loadExampleSingle() {
 }
 
 document.getElementById('analyze-btn').addEventListener('click', analyze);
+
+document.getElementById('copy-json-btn').addEventListener('click', function() {
+  copyLambsReportJson('copy-json-btn', 'lambs-last-report');
+});
+
+document.getElementById('copy-cluster-json-btn').addEventListener('click', function() {
+  copyLambsReportJson('copy-cluster-json-btn', 'lambs-last-cluster-report');
+});
 
 document.getElementById('aa-color-toggle').addEventListener('change', function () {
   const el = document.getElementById('results');
@@ -4698,6 +5022,35 @@ document.querySelectorAll('#vh-input, #vl-input').forEach(function(ta) {
 updateSingleExampleLinkVisibility();
 renderBasket();
 refreshMsaLiabilityOptionsUI();
+
+window.LAMBS = {
+  reportVersion: LAMBS_REPORT_VERSION,
+  get version() {
+    const el = document.getElementById('lambs-app-version');
+    return el ? el.textContent.trim() : '';
+  },
+  cleanSequence: cleanSequence,
+  validateSequence: validateSequence,
+  buildChainReport: buildChainReport,
+  buildChainPanelReport: buildChainPanelReport,
+  analyzeMabReport: analyzeMabReport,
+  analyzeMabReportFromRaw: analyzeMabReportFromRaw,
+  buildClusterReport: buildClusterReport,
+  lambsReportToJSON: lambsReportToJSON,
+  lastReport: null,
+  lastClusterReport: null,
+  analyzeSingle: function(vhRaw, vlRaw) {
+    const result = analyzeMabReportFromRaw(vhRaw, vlRaw);
+    if (!result.ok) return result;
+    return result.report;
+  },
+  analyzeBasket: function(entries, opts) {
+    opts = opts || {};
+    const threshold = opts.threshold != null ? opts.threshold : 70;
+    const filters = opts.liabilityFilters || [];
+    return buildClusterReport(entries, threshold, filters);
+  }
+};
 </script>
 </body>
 </html>

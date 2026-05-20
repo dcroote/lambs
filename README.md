@@ -42,6 +42,10 @@ Code is open source, permissively licensed under Apache 2.0, and available at [h
 node test.js
 ```
 
+### Programmatic use / AI agents
+
+Everything runs in the one release artifact **`index.html`** (`window.LAMBS`, JSON reports, **Copy JSON**). Details: [`AGENTS.md`](AGENTS.md) (repo-only, not bundled with the HTML download).
+
 ### Populating the V_GENE_DB object in index.html
 
 ```
