@@ -777,6 +777,37 @@ assert(
   "filterBasketByLiabilityFilters drops matching entries",
 );
 
+const exampleRows = parseCSV(EXAMPLE_CSV);
+const exampleHeaders = exampleRows[0].map(function (h) {
+  return h.trim().toLowerCase();
+});
+const exampleCols = csvChainColumnIndices(exampleHeaders);
+const exampleEntries = [];
+for (let er = 1; er < exampleRows.length; er++) {
+  const row = exampleRows[er];
+  const vh =
+    exampleCols.heavyCol >= 0 && row[exampleCols.heavyCol]
+      ? cleanSequence(row[exampleCols.heavyCol])
+      : "";
+  const vl =
+    exampleCols.lightCol >= 0 && row[exampleCols.lightCol]
+      ? cleanSequence(row[exampleCols.lightCol])
+      : "";
+  if (!vh && !vl) continue;
+  const nm =
+    exampleCols.nameCol >= 0 && row[exampleCols.nameCol]
+      ? row[exampleCols.nameCol].trim()
+      : "Seq " + er;
+  exampleEntries.push({ id: er, name: nm, vh: vh, vl: vl });
+}
+const keptExamples = filterBasketByLiabilityFilters(exampleEntries, [
+  "Unp. Cys",
+]);
+assert(
+  keptExamples.length === exampleEntries.length,
+  "Unp. Cys filter keeps example set (variable regions only, not constant-domain C count)",
+);
+
 // ============================================================
 // starMSA
 // ============================================================

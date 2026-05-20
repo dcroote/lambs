@@ -4274,8 +4274,10 @@ function entryHasFilteredLiability(entry, filterNames) {
   if (!filterNames || filterNames.length === 0) return false;
   for (let f = 0; f < filterNames.length; f++) {
     const name = filterNames[f];
-    if (entry.vh && detectLiabilities(entry.vh)[name]) return true;
-    if (entry.vl && detectLiabilities(entry.vl)[name]) return true;
+    const vhVar = entry.vh ? variableRegionForClustering(entry.vh) : '';
+    const vlVar = entry.vl ? variableRegionForClustering(entry.vl) : '';
+    if (vhVar && detectLiabilities(vhVar)[name]) return true;
+    if (vlVar && detectLiabilities(vlVar)[name]) return true;
   }
   return false;
 }
