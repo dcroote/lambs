@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.9.0](https://github.com/dcroote/lambs/compare/v0.8.0...v0.9.0) (2026-05-20)
+
+
+### Features
+
+* UI improvements ([0df4426](https://github.com/dcroote/lambs/commit/0df4426963b8ab22d0ca3c9ad87a661a92f4973d))
+
+
+### Bug Fixes
+
+* apply MSA liability filters on variable regions only ([9d412dd](https://github.com/dcroote/lambs/commit/9d412ddf4f9abac259baff128b3412dc278b2d77))
+
 ## [0.8.0](https://github.com/dcroote/lambs/compare/v0.7.0...v0.8.0) (2026-04-23)
 
 
