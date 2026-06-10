@@ -144,3 +144,54 @@ node test.js
 - Add or extend APIs on **`window.LAMBS`** inside `index.html`.
 - Document JSON field changes here under **Using LAMBS** (`reportVersion` bumps if breaking).
 - Prefer **Copy JSON** / `lambsReportToJSON` over new DOM scraping hooks.
+
+---
+
+## Cursor Cloud specific instructions
+
+LAMBS is a **zero-backend** product: one `index.html` file runs entirely in the browser. No database, API server, or Docker is required.
+
+### Verify logic (CI-equivalent)
+
+```bash
+node test.js
+```
+
+Requires **Node.js only** — no `pnpm install`. CI uses Node 24; Node 22+ works locally.
+
+There is **no lint command** configured (no ESLint/Prettier in the repo).
+
+### Run the application
+
+Open `index.html` in a browser:
+
+```bash
+# file:// URL (Playwright / headless)
+node --input-type=module -e "
+import { chromium } from 'playwright';
+import { pathToFileURL } from 'node:url';
+const url = pathToFileURL('/workspace/index.html').href;
+const b = await chromium.launch();
+const p = await b.newPage();
+await p.goto(url);
+console.log(await p.evaluate(() => LAMBS.analyzeMabReportFromRaw(
+  document.querySelector('#vh-input').value,
+  document.querySelector('#vl-input').value
+)));
+await b.close();
+"
+```
+
+Or serve statically: `python3 -m http.server 8080 --directory /workspace` → `http://localhost:8080/index.html`.
+
+### Optional dev dependencies
+
+For README screenshots or browser automation:
+
+```bash
+pnpm install
+pnpm exec playwright install chromium   # one-time per VM; not in update script
+pnpm screenshots
+```
+
+Python 3 scripts under `scripts/` regenerate embedded germline/stats data in `index.html`; only needed when changing those datasets, not for normal dev/test.
