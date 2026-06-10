@@ -163,34 +163,23 @@ There is **no lint command** configured (no ESLint/Prettier in the repo).
 
 ### Run the application
 
-Open `index.html` in a browser:
+Open `index.html` in a browser (`file://` or static server). For a headless UI smoke test covering **both** tabs (Single mAb Analysis + Multiple mAb Analysis with built-in example sequences):
 
 ```bash
-# file:// URL (Playwright / headless)
-node --input-type=module -e "
-import { chromium } from 'playwright';
-import { pathToFileURL } from 'node:url';
-const url = pathToFileURL('/workspace/index.html').href;
-const b = await chromium.launch();
-const p = await b.newPage();
-await p.goto(url);
-console.log(await p.evaluate(() => LAMBS.analyzeMabReportFromRaw(
-  document.querySelector('#vh-input').value,
-  document.querySelector('#vl-input').value
-)));
-await b.close();
-"
+pnpm install
+pnpm exec playwright install chromium   # one-time per VM; not in update script
+node scripts/verify-ui.mjs
 ```
+
+This loads the Trastuzumab example on the Single tab, runs **Analyze**, then switches to Multiple mAb Analysis, loads the 4-sequence example CSV, runs **Cluster & Analyze**, and saves screenshots under `LAMBS_UI_OUT` (default `/opt/cursor/artifacts/screenshots`).
 
 Or serve statically: `python3 -m http.server 8080 --directory /workspace` → `http://localhost:8080/index.html`.
 
 ### Optional dev dependencies
 
-For README screenshots or browser automation:
+For README screenshots:
 
 ```bash
-pnpm install
-pnpm exec playwright install chromium   # one-time per VM; not in update script
 pnpm screenshots
 ```
 
