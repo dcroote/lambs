@@ -14,7 +14,7 @@ Code is open source, permissively licensed under Apache 2.0, and available at [h
 - **Germline gene identification and alignment**: human and mouse with annotation of somatic hypermutation and CDRs.
 - **VH and VL chain properties**: length, molecular weight, theoretical pI, net charge at pH 7.4 and 5.5, and GRAVY with percentiles and quartiles versus approved therapeutic mAb sequences.
 - **Constant region identification**: human and mouse with alignments showing similarity to wildtype constant regions.
-- **Batch analysis**: sequence clustering with multiple sequence alignment, AA conservation plots, and consensus sequences per cluster. Accepts CSV upload.
+- **Batch analysis**: clonal-family clustering by V gene, J gene, CDR3 length, and adjustable CDR3 similarity with multiple sequence alignment, AA conservation plots, and consensus sequences per family. Accepts CSV upload.
 - **Verified analysis logic**: core algorithms are covered by extensive unit tests; run locally with `node test.js`.
 - **Privacy**: everything runs locally in the browser. No tracking and no data is sent anywhere.
 

@@ -969,7 +969,7 @@ details.collapsible-section > .collapsible-body {
     </div>
 
     <div class="cluster-controls">
-      <label for="cluster-threshold">Cluster identity threshold (%, combined heavy + light variable regions):</label>
+      <label for="cluster-threshold">CDR3 similarity threshold for clonal families (%):</label>
       <input type="number" id="cluster-threshold" value="70" min="1" max="100" step="1">
       <button id="cluster-btn" class="btn btn-primary" disabled>Cluster &amp; Analyze</button>
       <button id="copy-cluster-json-btn" class="btn btn-secondary" style="display:none" type="button">Copy JSON</button>
@@ -4211,7 +4211,7 @@ function globalAlign(seq1, seq2) {
 }
 
 // Variable-region substring for multi-Ab clustering: removes detected constant
-// domains so pairwise identity reflects Fv similarity only.
+// domains before germline/CDR3 calls and MSA rendering.
 function variableRegionForClustering(seq) {
   if (!seq) return '';
   const cr = findConstantRegion(seq);
@@ -4222,6 +4222,73 @@ function variableRegionForClustering(seq) {
 function clusterEntryVariableLength(entry) {
   return variableRegionForClustering(entry.vh || '').length +
     variableRegionForClustering(entry.vl || '').length;
+}
+
+function canonicalGeneKey(hit) {
+  if (!hit || !hit.gene) return '';
+  const alleleFree = hit.gene.split('*')[0];
+  return (hit.species || '') + ':' + alleleFree;
+}
+
+function cdr3SequenceForChain(seq, chainType) {
+  const range = detectCDR3(seq, chainType);
+  if (!range) return null;
+  return seq.substring(range[0], range[1]);
+}
+
+function buildClonotypeDescriptorForChain(seq, chainType) {
+  if (!seq) return null;
+  const vHit = findClosestGermline(seq, chainType);
+  const jHit = findClosestJGene(seq, chainType);
+  const cdr3 = cdr3SequenceForChain(seq, chainType);
+  if (!vHit || !jHit || !cdr3) return null;
+  return {
+    chainType: chainType,
+    vGene: vHit.gene,
+    vGeneSpecies: vHit.species,
+    vGeneKey: canonicalGeneKey(vHit),
+    jGene: jHit.gene,
+    jGeneSpecies: jHit.species,
+    jGeneKey: canonicalGeneKey(jHit),
+    cdr3Sequence: cdr3,
+    cdr3Length: cdr3.length
+  };
+}
+
+function buildClonotypeDescriptor(entry) {
+  const vh = variableRegionForClustering(entry.vh || '');
+  if (vh) return buildClonotypeDescriptorForChain(vh, 'VH');
+  const vl = variableRegionForClustering(entry.vl || '');
+  if (vl) return buildClonotypeDescriptorForChain(vl, 'VL');
+  return null;
+}
+
+function cdr3SequenceSimilarity(cdr3a, cdr3b) {
+  if (!cdr3a || !cdr3b || cdr3a.length !== cdr3b.length) return 0;
+  let matches = 0;
+  for (let i = 0; i < cdr3a.length; i++) {
+    if (cdr3a[i] === cdr3b[i]) matches++;
+  }
+  return matches / cdr3a.length;
+}
+
+function clonotypeDescriptorsCompatible(a, b, thresholdFrac) {
+  if (!a || !b) return false;
+  if (a.chainType !== b.chainType) return false;
+  if (a.vGeneKey !== b.vGeneKey) return false;
+  if (a.jGeneKey !== b.jGeneKey) return false;
+  if (a.cdr3Length !== b.cdr3Length) return false;
+  return cdr3SequenceSimilarity(a.cdr3Sequence, b.cdr3Sequence) >= thresholdFrac;
+}
+
+function summarizeClonotypeDescriptor(desc) {
+  if (!desc) return null;
+  return {
+    chainType: desc.chainType,
+    vGene: { gene: desc.vGene, species: desc.vGeneSpecies },
+    jGene: { gene: desc.jGene, species: desc.jGeneSpecies },
+    cdr3: { length: desc.cdr3Length, sequence: desc.cdr3Sequence }
+  };
 }
 
 function pairwiseIdentity(entry1, entry2) {
@@ -4239,23 +4306,29 @@ function pairwiseIdentity(entry1, entry2) {
 
 function clusterSequences(entries, threshold) {
   const frac = threshold / 100;
-  const sorted = entries.slice().sort(function(a, b) {
-    return clusterEntryVariableLength(b) - clusterEntryVariableLength(a);
+  const sorted = entries.map(function(entry) {
+    return { entry: entry, clonotype: buildClonotypeDescriptor(entry) };
+  }).sort(function(a, b) {
+    return clusterEntryVariableLength(b.entry) - clusterEntryVariableLength(a.entry);
   });
 
   const clusters = [];
   for (let i = 0; i < sorted.length; i++) {
+    const current = sorted[i];
     let assigned = false;
     for (let c = 0; c < clusters.length; c++) {
-      const ident = pairwiseIdentity(sorted[i], clusters[c].rep);
-      if (ident >= frac) {
-        clusters[c].members.push(sorted[i]);
+      if (clonotypeDescriptorsCompatible(current.clonotype, clusters[c].clonotype, frac)) {
+        clusters[c].members.push(current.entry);
         assigned = true;
         break;
       }
     }
     if (!assigned) {
-      clusters.push({ rep: sorted[i], members: [sorted[i]] });
+      clusters.push({
+        rep: current.entry,
+        clonotype: current.clonotype,
+        members: [current.entry]
+      });
     }
   }
 
@@ -4343,6 +4416,7 @@ function buildClusterReport(basket, threshold, filterNames) {
         index: idx + 1,
         size: cl.members.length,
         representativeName: cl.rep.name,
+        clonotype: summarizeClonotypeDescriptor(cl.clonotype),
         members: cl.members.map(function(m) {
           return {
             name: m.name,
@@ -4823,15 +4897,32 @@ function renderConstantRegionTableHtml(members) {
   return collapsibleSectionHtml('Constant Region', tableHtml, true, 'msa');
 }
 
+function renderClonotypeSummaryHtml(desc) {
+  if (!desc) {
+    return '<div class="text-hint" style="margin:0 0 8px 0">' +
+      'Clonotype could not be assigned for the representative sequence.' +
+      '</div>';
+  }
+  const vGene = desc.vGene + (desc.vGeneSpecies ? ' (' + desc.vGeneSpecies + ')' : '');
+  const jGene = desc.jGene + (desc.jGeneSpecies ? ' (' + desc.jGeneSpecies + ')' : '');
+  return '<div class="text-hint" style="margin:0 0 8px 0">' +
+    escapeHtml(desc.chainType + ' clonal family: V ' + vGene +
+      ', J ' + jGene +
+      ', CDR3 length ' + desc.cdr3Length +
+      ', representative CDR3 ' + desc.cdr3Sequence) +
+    '</div>';
+}
+
 function renderClusterResults(clusters, highlightNames) {
   if (clusters.length === 0) return '<div class="no-data">No sequences to cluster.</div>';
 
   let html = '';
   for (let c = 0; c < clusters.length; c++) {
     const cl = clusters[c];
-    const clusterTitle = 'Cluster ' + (c + 1) + ' (' + cl.members.length + ' sequence' +
+    const clusterTitle = 'Clonal family ' + (c + 1) + ' (' + cl.members.length + ' sequence' +
       (cl.members.length > 1 ? 's' : '') + ')';
-    let clusterInner = renderChainMSA(cl.members, 'vh', 'VH', highlightNames);
+    let clusterInner = renderClonotypeSummaryHtml(cl.clonotype);
+    clusterInner += renderChainMSA(cl.members, 'vh', 'VH', highlightNames);
     clusterInner += renderChainMSA(cl.members, 'vl', 'VL', highlightNames);
     clusterInner += renderConstantRegionTableHtml(cl.members);
     html += collapsiblePanelHtml('cluster-panel', clusterTitle, clusterInner, true);
