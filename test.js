@@ -38,7 +38,7 @@ if (!scriptMatch) {
 // Cut at the TAB SWITCHING section — everything before it is pure logic
 // (DOM-touching basket functions get a mock document so they don't crash)
 const CUTOFF =
-  "// ================================================================\n// TAB SWITCHING";
+  "    // ================================================================\n    // TAB SWITCHING";
 const pureJS = scriptMatch[1].split(CUTOFF)[0];
 
 const wrappedJS = `
@@ -56,12 +56,16 @@ const wrappedJS = `
   exports.detectLiabilities = detectLiabilities;
   exports.alignVGene = alignVGene;
   exports.findClosestGermline = findClosestGermline;
+  exports.clearAnalysisCache = clearAnalysisCache;
   exports.AA_PROPERTY = AA_PROPERTY;
   exports.V_GENE_DB = V_GENE_DB;
   exports.parseCSV = parseCSV;
   exports.escapeHtml = escapeHtml;
   exports.globalAlign = globalAlign;
   exports.pairwiseIdentity = pairwiseIdentity;
+  exports.buildClonotypeDescriptor = buildClonotypeDescriptor;
+  exports.cdr3SequenceSimilarity = cdr3SequenceSimilarity;
+  exports.clonotypeDescriptorsCompatible = clonotypeDescriptorsCompatible;
   exports.clusterSequences = clusterSequences;
   exports.starMSA = starMSA;
   exports.computeConservation = computeConservation;
@@ -112,12 +116,16 @@ const {
   detectLiabilities,
   alignVGene,
   findClosestGermline,
+  clearAnalysisCache,
   AA_PROPERTY,
   V_GENE_DB,
   parseCSV,
   escapeHtml,
   globalAlign,
   pairwiseIdentity,
+  buildClonotypeDescriptor,
+  cdr3SequenceSimilarity,
+  clonotypeDescriptorsCompatible,
   clusterSequences,
   starMSA,
   computeConservation,
@@ -493,6 +501,7 @@ assert(sg6.aligned2 === "---", "empty germline: gaps in germline row");
 section("findClosestGermline (with test data)");
 
 // Temporarily inject a test germline
+clearAnalysisCache();
 V_GENE_DB.human.IGHV["TEST-GENE*01"] = VH.substring(0, 98);
 const germTest = findClosestGermline(VH, "VH");
 assert(germTest !== null, "finds match with test data");
@@ -500,6 +509,7 @@ assert(germTest.gene === "TEST-GENE*01", "correct gene name");
 assert(germTest.species === "human", "correct species");
 assert(germTest.identity > 0.8, "high identity for near-match");
 delete V_GENE_DB.human.IGHV["TEST-GENE*01"];
+clearAnalysisCache();
 
 // ============================================================
 // AA_PROPERTY map
@@ -682,29 +692,90 @@ assert(
 // ============================================================
 section("clusterSequences");
 
+function replaceCdr3ForTest(seq, chainType, cdr3) {
+  const range = detectCDR3(seq, chainType);
+  assert(range !== null, "cluster setup: CDR3 detected for replacement");
+  return seq.slice(0, range[0]) + cdr3 + seq.slice(range[1]);
+}
+
+function mutateCdr3PrefixForTest(cdr3, count) {
+  const replacements = ["A", "G", "S", "T"];
+  let out = "";
+  for (let i = 0; i < count; i++) {
+    out += replacements.find(function (aa) {
+      return aa !== cdr3[i];
+    });
+  }
+  return out + cdr3.slice(count);
+}
+
+const clBaseRange = detectCDR3(VH, "VH");
+assert(clBaseRange !== null, "cluster setup: VH CDR3 detected");
+const clBaseCdr3 = VH.slice(clBaseRange[0], clBaseRange[1]);
+assert(clBaseCdr3.length >= 8, "cluster setup: CDR3 long enough for threshold tests");
+
+const clSimilarCdr3 = mutateCdr3PrefixForTest(clBaseCdr3, 2);
+const clBelowCdr3 = mutateCdr3PrefixForTest(clBaseCdr3, 4);
+const clSimilarVh = replaceCdr3ForTest(VH, "VH", clSimilarCdr3);
+const clBelowVh = replaceCdr3ForTest(VH, "VH", clBelowCdr3);
+const clDifferentLengthVh = replaceCdr3ForTest(VH, "VH", clBaseCdr3 + "A");
+
+const clBaseDesc = buildClonotypeDescriptor({ vh: VH, vl: VL });
+const clSimilarDesc = buildClonotypeDescriptor({ vh: clSimilarVh, vl: VL });
+const clBelowDesc = buildClonotypeDescriptor({ vh: clBelowVh, vl: VL });
+const clLengthDesc = buildClonotypeDescriptor({ vh: clDifferentLengthVh, vl: VL });
+
+assert(clBaseDesc.chainType === "VH", "clonotype descriptor: VH preferred when present");
+assert(
+  clBaseDesc.vGeneKey === clSimilarDesc.vGeneKey &&
+    clBaseDesc.jGeneKey === clSimilarDesc.jGeneKey,
+  "clonotype descriptor: CDR3 mutation keeps V/J assignment",
+);
+assertApprox(
+  cdr3SequenceSimilarity(clBaseCdr3, clSimilarCdr3),
+  (clBaseCdr3.length - 2) / clBaseCdr3.length,
+  0.001,
+  "CDR3 similarity uses same-length positional identity",
+);
+assert(
+  clonotypeDescriptorsCompatible(clBaseDesc, clSimilarDesc, 0.7),
+  "clonotype compatibility: same V/J/length and >=70% CDR3 similarity",
+);
+assert(
+  !clonotypeDescriptorsCompatible(clBaseDesc, clBelowDesc, 0.7),
+  "clonotype compatibility: below-threshold CDR3 similarity rejected",
+);
+assert(
+  !clonotypeDescriptorsCompatible(clBaseDesc, clLengthDesc, 0.1),
+  "clonotype compatibility: different CDR3 lengths rejected",
+);
+
 const clEntries = [
-  { id: 1, name: "A", vh: "ABCDEF", vl: "GHIJ" },
-  { id: 2, name: "B", vh: "ABCDEF", vl: "GHIJ" },
-  { id: 3, name: "C", vh: "XYZXYZ", vl: "WXWX" },
+  { id: 1, name: "A", vh: VH, vl: VL },
+  { id: 2, name: "B", vh: clSimilarVh, vl: VL },
+  { id: 3, name: "C", vh: clBelowVh, vl: VL },
+  { id: 4, name: "D", vh: clDifferentLengthVh, vl: VL },
 ];
 
 const cl100 = clusterSequences(clEntries, 100);
+assert(cl100.length === 4, "cluster@100%: CDR3 variants form separate families");
+
+const cl70 = clusterSequences(clEntries, 70);
+assert(cl70.length === 3, "cluster@70%: only same clonotype above threshold groups");
+assert(cl70[0].members.length === 2, "cluster@70%: similar CDR3 pair groups");
 assert(
-  cl100.length >= 2,
-  "cluster@100%: dissimilar seqs form separate clusters",
+  cl70[0].members.map(function (m) { return m.name; }).join(",") === "A,B",
+  "cluster@70%: grouped members are the above-threshold pair",
 );
 
 const cl10 = clusterSequences(clEntries, 10);
-assert(
-  cl10.length >= 1,
-  "cluster@10%: very low threshold groups more sequences",
-);
+assert(cl10.length === 2, "cluster@10%: threshold is adjustable but length still enforced");
 
 const clIdentical = clusterSequences(
   [
-    { id: 1, name: "A", vh: "ABCDEF", vl: "GHIJ" },
-    { id: 2, name: "B", vh: "ABCDEF", vl: "GHIJ" },
-    { id: 3, name: "C", vh: "ABCDEF", vl: "GHIJ" },
+    { id: 1, name: "A", vh: VH, vl: VL },
+    { id: 2, name: "B", vh: VH, vl: VL },
+    { id: 3, name: "C", vh: VH, vl: VL },
   ],
   70,
 );
@@ -718,7 +789,7 @@ const clEmpty = clusterSequences([], 70);
 assert(clEmpty.length === 0, "cluster: empty input = empty output");
 
 const clSingle = clusterSequences(
-  [{ id: 1, name: "A", vh: "ABCDEF", vl: "GHIJ" }],
+  [{ id: 1, name: "A", vh: VH, vl: VL }],
   70,
 );
 assert(clSingle.length === 1, "cluster: single entry = 1 cluster");
@@ -727,12 +798,25 @@ assert(
   "cluster: single entry cluster size 1",
 );
 
+const clVlRange = detectCDR3(VL, "VL");
+assert(clVlRange !== null, "cluster setup: VL CDR3 detected");
+const clVlCdr3 = VL.slice(clVlRange[0], clVlRange[1]);
+const clLightOnly = clusterSequences(
+  [
+    { id: 1, name: "L1", vh: "", vl: VL },
+    { id: 2, name: "L2", vh: "", vl: replaceCdr3ForTest(VL, "VL", mutateCdr3PrefixForTest(clVlCdr3, 2)) },
+  ],
+  70,
+);
+assert(clLightOnly.length === 1, "cluster: VL-only entries use light-chain clonotype");
+assert(clLightOnly[0].clonotype.chainType === "VL", "cluster: VL-only clonotype labelled VL");
+
 // Verify sorted by size (largest first)
 const clSorted = clusterSequences(
   [
-    { id: 1, name: "A", vh: "ABCDEF", vl: "GHIJ" },
-    { id: 2, name: "B", vh: "ABCDEF", vl: "GHIJ" },
-    { id: 3, name: "C", vh: "XYZXYZ", vl: "WXWX" },
+    { id: 1, name: "A", vh: VH, vl: VL },
+    { id: 2, name: "B", vh: VH, vl: VL },
+    { id: 3, name: "C", vh: clDifferentLengthVh, vl: VL },
   ],
   70,
 );
@@ -3245,6 +3329,7 @@ const basketFixture = [
 ];
 const clusterRep = buildClusterReport(basketFixture, 70, []);
 assert(clusterRep.kind === "cluster" && clusterRep.clusterCount >= 1, "buildClusterReport kind");
+assert(clusterRep.clusters[0].clonotype.chainType === "VH", "cluster report includes clonotype");
 assert(clusterRep.clusters[0].vh.consensusAnalysis, "cluster consensusAnalysis");
 assert(clusterRep.clusters[0].members.length === 2, "cluster member count");
 

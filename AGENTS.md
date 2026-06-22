@@ -91,6 +91,12 @@ Human-visible shortcuts (same file): **Copy JSON** after **Analyze** (`#lambs-la
     "index": 1,
     "size": 2,
     "representativeName": "A",
+ "clonotype": {
+  "chainType": "VH",
+  "vGene": { "gene", "species" },
+  "jGene": { "gene", "species" },
+  "cdr3": { "length", "sequence" }
+ } | null,
     "members": [{ "name", "vh": { "...panel..." }, "vl": { "...panel..." } }],
     "vh": {
       "chainType": "VH",
