@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.10.1](https://github.com/dcroote/lambs/compare/v0.10.0...v0.10.1) (2026-06-23)
+
+
+### Features
+
+* implement clonotype-based clustering ([b98286b](https://github.com/dcroote/lambs/commit/b98286b3fe81b0d2594812e5e3a513579ce7bafd))
+
 ## [0.10.0](https://github.com/dcroote/lambs/compare/v0.9.0...v0.10.0) (2026-05-20)
 
 
