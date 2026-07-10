@@ -88,6 +88,12 @@ const wrappedJS = `
   exports.alignConstantRegion = alignConstantRegion;
   exports.findConstantRegion = findConstantRegion;
   exports.CONST_REGION_DB = CONST_REGION_DB;
+  exports.HUMAN_IGHG_EU_NUMBERING = HUMAN_IGHG_EU_NUMBERING;
+  exports.getHumanIgGEuNumbers = getHumanIgGEuNumbers;
+  exports.mapEuOntoConstantAlignment = mapEuOntoConstantAlignment;
+  exports.buildEuRuler = buildEuRuler;
+  exports.renderEuNumberingRow = renderEuNumberingRow;
+  exports.renderConstantRegionPanel = renderConstantRegionPanel;
   exports.EXAMPLE_CSV = EXAMPLE_CSV;
   exports.csvChainColumnIndices = csvChainColumnIndices;
   exports.alignJGene = alignJGene;
@@ -148,6 +154,12 @@ const {
   alignConstantRegion,
   findConstantRegion,
   CONST_REGION_DB,
+  HUMAN_IGHG_EU_NUMBERING,
+  getHumanIgGEuNumbers,
+  mapEuOntoConstantAlignment,
+  buildEuRuler,
+  renderEuNumberingRow,
+  renderConstantRegionPanel,
   EXAMPLE_CSV,
   csvChainColumnIndices,
   alignJGene,
@@ -2957,6 +2969,375 @@ assert(
   findConstantRegion(TEST_VAR_REGION + truncatedCHPrefix) === null,
   "findConstantRegion: returns null when only a short CH prefix is present",
 );
+
+// ============================================================
+// Human IgG EU numbering (Edelman / EU index via IMGT correspondence)
+// Provenance: IMGT Scientific chart Hu_IGHGnber.html; therapeutic
+// sequences from PDB / KEGG / DDInter as cited per case.
+// ============================================================
+section("Human IgG EU numbering");
+
+function aaAtEu(isotype, seq, euNumber) {
+  const eu = getHumanIgGEuNumbers(isotype);
+  const idx = eu.indexOf(euNumber);
+  return idx >= 0 ? seq[idx] : null;
+}
+
+// --- Map integrity vs CONST_REGION_DB and IMGT domain lengths ---
+for (const iso of ["IGHG1", "IGHG2", "IGHG3", "IGHG4"]) {
+  const seq = CONST_REGION_DB.human.CH[iso].s;
+  const eu = getHumanIgGEuNumbers(iso);
+  assert(eu !== null, `getHumanIgGEuNumbers(${iso}): returns map`);
+  assert(
+    eu.length === seq.length,
+    `EU map length matches CONST_REGION_DB ${iso}: ${eu.length} vs ${seq.length}`,
+  );
+  assert(
+    HUMAN_IGHG_EU_NUMBERING[iso] === eu,
+    `HUMAN_IGHG_EU_NUMBERING.${iso} is the same array as getHumanIgGEuNumbers`,
+  );
+}
+
+assert(
+  getHumanIgGEuNumbers("IGHA1") === null,
+  "getHumanIgGEuNumbers: null for non-IgG isotype",
+);
+assert(
+  getHumanIgGEuNumbers("IGHM") === null,
+  "getHumanIgGEuNumbers: null for IGHM",
+);
+assert(
+  mapEuOntoConstantAlignment("ASTK", "mouse", "IGHG1") === null,
+  "mapEuOntoConstantAlignment: null for mouse IgG",
+);
+assert(
+  mapEuOntoConstantAlignment("ASTK", "human", "IGKC") === null,
+  "mapEuOntoConstantAlignment: null for human light-chain constant",
+);
+
+// CH1 always Eu 118–215 (98 aa) for all human IGHG
+for (const iso of ["IGHG1", "IGHG2", "IGHG3", "IGHG4"]) {
+  const eu = getHumanIgGEuNumbers(iso);
+  assert(eu[0] === 118, `${iso} Eu[0] = 118 (CH1 start)`);
+  assert(eu[97] === 215, `${iso} Eu[97] = 215 (CH1 end)`);
+  assert(
+    CONST_REGION_DB.human.CH[iso].s[0] === "A",
+    `${iso} CH1 start residue A118`,
+  );
+}
+
+// IGHG1 continuous hinge 216–230, CH2 231–340, CH3 341–447
+{
+  const eu = getHumanIgGEuNumbers("IGHG1");
+  const g1 = CONST_REGION_DB.human.CH.IGHG1.s;
+  assert(eu[98] === 216 && eu[112] === 230, "IGHG1 hinge Eu 216–230");
+  assert(eu[113] === 231 && eu[222] === 340, "IGHG1 CH2 Eu 231–340");
+  assert(eu[223] === 341 && eu[329] === 447, "IGHG1 CH3 Eu 341–447");
+  // Classic Eu landmarks (Edelman Eu protein / IMGT table)
+  assert(aaAtEu("IGHG1", g1, 118) === "A", "IGHG1 A118");
+  assert(aaAtEu("IGHG1", g1, 216) === "E", "IGHG1 E216 (hinge start)");
+  assert(aaAtEu("IGHG1", g1, 226) === "C", "IGHG1 C226 (hinge Cys)");
+  assert(aaAtEu("IGHG1", g1, 234) === "L", "IGHG1 L234");
+  assert(aaAtEu("IGHG1", g1, 297) === "N", "IGHG1 N297 (N-glycan)");
+  assert(aaAtEu("IGHG1", g1, 329) === "P", "IGHG1 P329");
+  assert(aaAtEu("IGHG1", g1, 446) === "G", "IGHG1 G446");
+  assert(aaAtEu("IGHG1", g1, 447) === "K", "IGHG1 K447");
+}
+
+// IGHG2: hinge skips Eu 221/223/225; CH2 omits Eu 233 (IMGT note 2)
+{
+  const eu = getHumanIgGEuNumbers("IGHG2");
+  const g2 = CONST_REGION_DB.human.CH.IGHG2.s;
+  assert(
+    JSON.stringify(eu.slice(98, 110)) ===
+      JSON.stringify([216, 217, 218, 219, 220, 222, 224, 226, 227, 228, 229, 230]),
+    "IGHG2 hinge Eu indices match IMGT IGHG2 hinge table",
+  );
+  assert(eu.indexOf(233) === -1, "IGHG2 has no Eu 233 (CH2 codon 1.4 deletion)");
+  assert(aaAtEu("IGHG2", g2, 231) === "A", "IGHG2 A231");
+  assert(aaAtEu("IGHG2", g2, 232) === "P", "IGHG2 P232");
+  assert(aaAtEu("IGHG2", g2, 234) === "P", "IGHG2 P234 (after skipped 233)");
+  assert(aaAtEu("IGHG2", g2, 297) === "N", "IGHG2 N297");
+  assert(aaAtEu("IGHG2", g2, 226) === "C", "IGHG2 C226");
+}
+
+// IGHG4: hinge Eu 216–220 then 224–230 (skips 221–223)
+{
+  const eu = getHumanIgGEuNumbers("IGHG4");
+  const g4 = CONST_REGION_DB.human.CH.IGHG4.s;
+  assert(
+    JSON.stringify(eu.slice(98, 110)) ===
+      JSON.stringify([216, 217, 218, 219, 220, 224, 225, 226, 227, 228, 229, 230]),
+    "IGHG4 hinge Eu indices match IMGT IGHG4 hinge table",
+  );
+  assert(eu.indexOf(221) === -1 && eu.indexOf(222) === -1 && eu.indexOf(223) === -1,
+    "IGHG4 hinge omits Eu 221–223");
+  assert(aaAtEu("IGHG4", g4, 228) === "S", "IGHG4 wild-type S228");
+  assert(aaAtEu("IGHG4", g4, 234) === "F", "IGHG4 F234 (APEFLGG)");
+  assert(aaAtEu("IGHG4", g4, 297) === "N", "IGHG4 N297");
+}
+
+// IGHG3: extended hinge — only H1/H4 carry Eu indices per IMGT
+{
+  const eu = getHumanIgGEuNumbers("IGHG3");
+  const g3 = CONST_REGION_DB.human.CH.IGHG3.s;
+  assert(eu[98] === 216 && eu[100] === 218, "IGHG3 H1 Eu 216–218");
+  assert(eu[101] === null && eu[102] === null, "IGHG3 H1 positions 4–5 unnumbered");
+  assert(eu[103] === 219 && eu[112] === 228, "IGHG3 H1 Eu 219–228");
+  assert(eu[113] === null && eu[114] === null, "IGHG3 H1 positions 16–17 unnumbered");
+  // H2+H3 (30 residues) all null
+  for (let i = 115; i < 145; i++) {
+    assert(eu[i] === null, `IGHG3 hinge H2/H3 index ${i} unnumbered`);
+  }
+  assert(eu[158] === 229 && eu[159] === 230, "IGHG3 H4 Eu 229–230");
+  assert(eu[160] === 231, "IGHG3 CH2 starts at Eu 231");
+  assert(aaAtEu("IGHG3", g3, 297) === "N", "IGHG3 N297");
+  assert(g3[98] === "E" && g3[159] === "P", "IGHG3 hinge termini E…P");
+}
+
+// --- Alignment mapping: perfect match ---
+{
+  const g1 = CONST_REGION_DB.human.CH.IGHG1.s;
+  const mapped = mapEuOntoConstantAlignment(g1, "human", "IGHG1");
+  assert(mapped !== null && mapped.length === g1.length, "mapEu perfect IGHG1 length");
+  assert(mapped[0] === 118 && mapped[mapped.length - 1] === 447, "mapEu perfect termini");
+  const n297col = mapped.indexOf(297);
+  assert(n297col >= 0 && g1[n297col] === "N", "mapEu perfect N297 column");
+}
+
+// Alignment with a query insertion (gap in reference): Eu stays on ref residues
+{
+  const g1 = CONST_REGION_DB.human.CH.IGHG1.s;
+  const a2 = g1.slice(0, 5) + "-" + g1.slice(5);
+  const mapped = mapEuOntoConstantAlignment(a2, "human", "IGHG1");
+  assert(mapped[5] === null, "mapEu: gap in reference → null Eu");
+  assert(mapped[4] === 122 && mapped[6] === 123, "mapEu: Eu continues across ref gap");
+}
+
+// buildEuRuler labels multiples of 10
+{
+  const mapped = mapEuOntoConstantAlignment(
+    CONST_REGION_DB.human.CH.IGHG1.s,
+    "human",
+    "IGHG1",
+  );
+  const ruler = buildEuRuler(mapped);
+  const col120 = mapped.indexOf(120);
+  const col300 = mapped.indexOf(300);
+  assert(ruler.join("").includes("120"), "buildEuRuler includes 120");
+  assert(ruler.join("").includes("300"), "buildEuRuler includes 300");
+  assert(ruler[col120] === "0", "buildEuRuler right-aligns 120 on column");
+  assert(ruler[col300] === "0", "buildEuRuler right-aligns 300 on column");
+}
+
+// Panel HTML: EU row above raw ruler for human IgG; absent otherwise
+{
+  const hit = findConstantRegion(TEST_VAR_REGION + HUMAN_IGHG1_CH);
+  const html = renderConstantRegionPanel(hit, "CH");
+  const euIdx = html.indexOf(">EU:</span>");
+  const rawRulerIdx = html.indexOf('class="ruler-char">1</span>');
+  assert(euIdx >= 0, "renderConstantRegionPanel: EU row present for human IGHG1");
+  assert(
+    euIdx < rawRulerIdx,
+    "renderConstantRegionPanel: EU row appears above raw numbering",
+  );
+  // Digits are one-per-span (same as raw ruler); check reconstructed EU text
+  const euRowMatch = html.match(/>EU:<\/span>([\s\S]*?)<\/div>/);
+  assert(euRowMatch, "EU row HTML parseable");
+  const euText = euRowMatch[1].replace(/<[^>]+>/g, "");
+  assert(euText.includes("120") && euText.includes("300"),
+    "EU row shows Eu decade labels (120, 300)");
+}
+{
+  const hit = findConstantRegion(TEST_VAR_REGION + HUMAN_IGKC_CL);
+  const html = renderConstantRegionPanel(hit, "CL");
+  assert(
+    !html.includes(">EU:</span>"),
+    "renderConstantRegionPanel: no EU row for IGKC",
+  );
+}
+
+// --- Real therapeutics (provenance in comments) ---
+
+// Trastuzumab (Herceptin) IgG1κ — heavy chain from KEGG DRUG D03257
+// (https://www.kegg.jp/entry/D03257). CH matches human IGHG1 with
+// CH3 D356E/L358M allotype (REEM vs RDEL). Disulfide note lists
+// H229–H'229 / H232–H'232 (Kabat hinge Cys; Eu 226 / 229).
+const TRASTUZUMAB_HC =
+  "EVQLVESGGGLVQPGGSLRLSCAASGFNIKDTYIHWVRQAPGKGLEWVARIYPTNGYTRY" +
+  "ADSVKGRFTISADTSKNTAYLQMNSLRAEDTAVYYCSRWGGDGFYAMDYWGQGTLVTVSS" +
+  "ASTKGPSVFPLAPSSKSTSGGTAALGCLVKDYFPEPVTVSWNSGALTSGVHTFPAVLQSS" +
+  "GLYSLSSVVTVPSSSLGTQTYICNVNHKPSNTKVDKKVEPKSCDKTHTCPPCPAPELLGG" +
+  "PSVFLFPPKPKDTLMISRTPEVTCVVVDVSHEDPEVKFNWYVDGVEVHNAKTKPREEQYN" +
+  "STYRVVSVLTVLHQDWLNGKEYKCKVSNKALPAPIEKTISKAKGQPREPQVYTLPPSREE" +
+  "MTKNQVSLTCLVKGFYPSDIAVEWESNGQPENNYKTTPPVLDSDGSFFLYSKLTVDKSRW" +
+  "QQGNVFSCSVMHEALHNHYTQKSLSLSPG";
+{
+  const hit = findConstantRegion(TRASTUZUMAB_HC);
+  assert(hit && hit.isotype === "IGHG1" && hit.species === "human",
+    "trastuzumab: identified as human IGHG1");
+  const euCols = mapEuOntoConstantAlignment(hit.aligned2, hit.species, hit.isotype);
+  assert(euCols, "trastuzumab: Eu columns mapped");
+  // N297 glycosylation site (standard Eu index for IgG Fc N-glycan)
+  const n297 = euCols.indexOf(297);
+  assert(n297 >= 0 && hit.aligned1[n297] === "N",
+    "trastuzumab: query residue at Eu 297 is N");
+  // Hinge Cys Eu 226 / 229 (KEGG disulfide H229/H232 Kabat ≈ Eu 226/229)
+  assert(hit.aligned1[euCols.indexOf(226)] === "C", "trastuzumab: C226");
+  assert(hit.aligned1[euCols.indexOf(229)] === "C", "trastuzumab: C229");
+  assert(hit.aligned1[euCols.indexOf(234)] === "L", "trastuzumab: L234");
+  // Truncated vs DB at C-terminus (KEGG ends …SPG without K447)
+  assert(euCols.indexOf(447) >= 0 && hit.aligned1[euCols.indexOf(447)] === "-",
+    "trastuzumab: Eu 447 is a gap in query (KEGG sequence omits K447)");
+  const html = renderConstantRegionPanel(hit, "CH");
+  assert(html.includes(">EU:</span>"), "trastuzumab panel includes EU row");
+}
+
+// Adalimumab Fab heavy (PDB 3WD5 chain H) — CH1 through …VDKKI
+// https://www.rcsb.org/structure/3WD5
+// Full-length therapeutic VH from igblast_thera cdr3TestCases (Adalimumab_vh).
+const ADALIMUMAB_FAB_HC =
+  "EVQLVESGGGLVQPGRSLRLSCAASGFTFDDYAMHWVRQAPGKGLEWVSAITWNSGHIDYADSVEGRFTISRDNAKNSLYLDMNSLRAEDTAVYYCAKVSYLSTASSLDYWGQGTLVTVSS" +
+  "ASTKGPSVFPLAPSSKSTSGGTAALGCLVKDYFPEPVTVSWNSGALTSGVHTFPAVLQSSGLYSLSSVVTVPSSSLGTQTYICNVNHKPSNTKVDKKI";
+{
+  const adaVh = cdr3TestCases.find(function (tc) { return tc.id === "Adalimumab_vh"; }).seq;
+  const adaFull = adaVh + HUMAN_IGHG1_CH;
+  const hit = findConstantRegion(adaFull);
+  assert(hit && hit.isotype === "IGHG1", "adalimumab VH+IGHG1: IGHG1");
+  const euCols = mapEuOntoConstantAlignment(hit.aligned2, hit.species, hit.isotype);
+  assert(hit.aligned1[euCols.indexOf(118)] === "A", "adalimumab: A118");
+  assert(hit.aligned1[euCols.indexOf(297)] === "N", "adalimumab: N297");
+  const fabCH1 = ADALIMUMAB_FAB_HC.slice(ADALIMUMAB_FAB_HC.indexOf("ASTKG"));
+  // PDB 3WD5 Fab ends at CH1 with I215 (vs germline V215); first 97 aa are identical
+  assert(fabCH1.slice(0, 97) === HUMAN_IGHG1_CH.slice(0, 97),
+    "adalimumab Fab CH1 (PDB 3WD5) matches IGHG1 Eu 118–214");
+  assert(fabCH1[97] === "I" && HUMAN_IGHG1_CH[97] === "V",
+    "adalimumab Fab CH1 ends I215 (allotype/construct) vs DB V215");
+}
+
+// Rituximab Fab heavy (PDB 2OSL) — murine VH + human IGHG1 CH1/hinge start
+// https://www.rcsb.org/structure/2OSL
+const RITUXIMAB_FAB_HC =
+  "QVQLQQPGAELVKPGASVKMSCKASGYTFTSYNMHWVKQTPGRGLEWIGAIYPGNGDTSYNQKFKGKATLTADKSSSTAYMQLSSLTSEDSAVYYCARSTYYGGDWYFNVWGAGTTVTVSA" +
+  "ASTKGPSVFPLAPSSKSTSGGTAALGCLVKDYFPEPVTVSWNSGALTSGVHTFPAVLQSSGLYSLSSVVTVPSSSLGTQTYICNVNHKPSNTKVDKKVEPKSC";
+{
+  // Fab includes CH1 + hinge through Eu 220 (…VEPKSC); DB index 0–103 is …VEPKSCD
+  assert(
+    RITUXIMAB_FAB_HC.includes(HUMAN_IGHG1_CH.slice(0, 103)),
+    "rituximab Fab (PDB 2OSL): human IGHG1 through Eu 220 (…EPKSC)",
+  );
+  const full = RITUXIMAB_FAB_HC + HUMAN_IGHG1_CH.slice(103);
+  const hit = findConstantRegion(full);
+  assert(hit && hit.isotype === "IGHG1", "rituximab: IGHG1");
+  const euCols = mapEuOntoConstantAlignment(hit.aligned2, hit.species, hit.isotype);
+  assert(hit.aligned1[euCols.indexOf(220)] === "C", "rituximab: C220");
+  assert(hit.aligned1[euCols.indexOf(226)] === "C", "rituximab: C226");
+}
+
+// b12 broadly neutralizing Ab IgG1 — full HC from PDB 1HZH
+// https://www.rcsb.org/structure/1HZH (Saphire et al.)
+const B12_HC =
+  "QVQLVQSGAEVKKPGASVKVSCQASGYRFSNFVIHWVRQAPGQRFEWMGWINPYNGNKEFSAKFQDRVTFTADTSANTAYMELRSLRSADTAVYYCARVGPYSWDDSPQDNYYMDVWGKGTTVIVSS" +
+  "ASTKGPSVFPLAPSSKSTSGGTAALGCLVKDYFPEPVTVSWNSGALTSGVHTFPAVLQSSGLYSLSSVVTVPSSSLGTQTYICNVNHKPSNTKVDKKAEPKSCDKTHTCPPCPAPELLGGPSVFLFPPKPKDTLMISRTPEVTCVVVDVSHEDPEVKFNWYVDGVEVHNAKTKPREEQYNSTYRVVSVLTVLHQDWLNGKEYKCKVSNKALPAPIEKTISKAKGQPREPQVYTLPPSRDELTKNQVSLTCLVKGFYPSDIAVEWESNGQPENNYKTTPPVLDSDGSFFLYSKLTVDKSRWQQGNVFSCSVMHEALHNHYTQKSLSLSPGK";
+{
+  const hit = findConstantRegion(B12_HC);
+  assert(hit && hit.isotype === "IGHG1", "b12 (1HZH): IGHG1");
+  const euCols = mapEuOntoConstantAlignment(hit.aligned2, hit.species, hit.isotype);
+  // Allotype: A215 (Kabat/Eu CH1 end) vs germline V215 — PDB has A before EPKSC
+  assert(hit.aligned1[euCols.indexOf(215)] === "A", "b12: A215 allotype");
+  assert(hit.aligned1[euCols.indexOf(297)] === "N", "b12: N297");
+  assert(hit.aligned1[euCols.indexOf(447)] === "K", "b12: K447");
+}
+
+// Pembrolizumab IgG4 S228P — heavy chain from PDB 5DK3
+// https://www.rcsb.org/structure/5DK3 ; S228P is the hinge-stabilizing mutation
+// (InvivoGen / literature: Ser→Pro at Eu 228).
+const PEMBROLIZUMAB_HC =
+  "QVQLVQSGVEVKKPGASVKVSCKASGYTFTNYYMYWVRQAPGQGLEWMGGINPSNGGTNFNEKFKNRVTLTTDSSTTTAYMELKSLQFDDTAVYYCARRDYRFDMGFDYWGQGTTVTVSS" +
+  "ASTKGPSVFPLAPCSRSTSESTAALGCLVKDYFPEPVTVSWNSGALTSGVHTFPAVLQSSGLYSLSSVVTVPSSSLGTKTYTCNVDHKPSNTKVDKRVESKYGPPCPPCPAPEFLGGPSVFLFPPKPKDTLMISRTPEVTCVVVDVSQEDPEVQFNWYVDGVEVHNAKTKPREEQFNSTYRVVSVLTVLHQDWLNGKEYKCKVSNKGLPSSIEKTISKAKGQPREPQVYTLPPSQEEMTKNQVSLTCLVKGFYPSDIAVEWESNGQPENNYKTTPPVLDSDGSFFLYSRLTVDKSRWQQGNVFSCSVMHEALHNHYTQKSLSLS";
+{
+  const hit = findConstantRegion(PEMBROLIZUMAB_HC);
+  assert(hit && hit.isotype === "IGHG4" && hit.species === "human",
+    "pembrolizumab (5DK3): human IGHG4");
+  const euCols = mapEuOntoConstantAlignment(hit.aligned2, hit.species, hit.isotype);
+  assert(hit.aligned1[euCols.indexOf(228)] === "P",
+    "pembrolizumab: P228 (S228P hinge stabilization)");
+  assert(CONST_REGION_DB.human.CH.IGHG4.s[getHumanIgGEuNumbers("IGHG4").indexOf(228)] === "S",
+    "wild-type IGHG4 reference is S228 (contrast with pembrolizumab)");
+  assert(hit.aligned1[euCols.indexOf(234)] === "F", "pembrolizumab: F234");
+  assert(hit.aligned1[euCols.indexOf(297)] === "N", "pembrolizumab: N297");
+  // IgG4 hinge skips 221–223: Eu 220 then 224
+  assert(hit.aligned1[euCols.indexOf(220)] === "G", "pembrolizumab: G220");
+  assert(hit.aligned1[euCols.indexOf(224)] === "P", "pembrolizumab: P224");
+  assert(euCols.indexOf(221) === -1, "pembrolizumab map has no Eu 221 column");
+  const html = renderConstantRegionPanel(hit, "CH");
+  assert(html.includes(">EU:</span>"), "pembrolizumab panel includes EU row");
+}
+
+// Nivolumab IgG4 S228P — full HC from DDInter / DrugBank DB09035 sequence dump
+// https://ddinter2.scbdd.com/server/drug-detail/DDInter1308/
+const NIVOLUMAB_HC =
+  "QVQLVESGGGVVQPGRSLRLDCKASGITFSNSGMHWVRQAPGKGLEWVAVIWYDGSKRYYADSVKGRFTISRDNSKNTLFLQMNSLRAEDTAVYYCATNDDYWGQGTLVTVSS" +
+  "ASTKGPSVFPLAPCSRSTSESTAALGCLVKDYFPEPVTVSWNSGALTSGVHTFPAVLQSSGLYSLSSVVTVPSSSLGTKTYTCNVDHKPSNTKVDKRVESKYGPPCPPCPAPEFLGGPSVFLFPPKPKDTLMISRTPEVTCVVVDVSQEDPEVQFNWYVDGVEVHNAKTKPREEQFNSTYRVVSVLTVLHQDWLNGKEYKCKVSNKGLPSSIEKTISKAKGQPREPQVYTLPPSQEEMTKNQVSLTCLVKGFYPSDIAVEWESNGQPENNYKTTPPVLDSDGSFFLYSRLTVDKSRWQEGNVFSCSVMHEALHNHYTQKSLSLSLGK";
+{
+  const hit = findConstantRegion(NIVOLUMAB_HC);
+  assert(hit && hit.isotype === "IGHG4", "nivolumab: IGHG4");
+  const euCols = mapEuOntoConstantAlignment(hit.aligned2, hit.species, hit.isotype);
+  assert(hit.aligned1[euCols.indexOf(228)] === "P", "nivolumab: P228 (S228P)");
+  assert(hit.aligned1[euCols.indexOf(297)] === "N", "nivolumab: N297");
+  assert(hit.aligned1[euCols.indexOf(447)] === "K", "nivolumab: K447");
+  // CH3 E419 (WQEGN) vs pembrolizumab Q419 (WQQGN) — both Eu 419
+  assert(hit.aligned1[euCols.indexOf(419)] === "E", "nivolumab: E419 (WQEGN)");
+}
+
+// Panitumumab IgG2 Fab heavy (PDB 5SX4) — human IGHG2 CH1 + hinge start
+// https://www.rcsb.org/structure/5SX4
+const PANITUMUMAB_FAB_HC =
+  "QVQLQESGPGLVKPSETLSLTCTVSGGSVSSGDYYWTWIRQSPGKGLEWIGHIYYSGNTNYNPSLKSRLTISIDTSKTQFSLKLSSVTAADTAIYYCVRDRVTGAFDIWGQGTMVTVSS" +
+  "ASTKGPSVFPLAPCSRSTSESTAALGCLVKDYFPEPVTVSWNSGALTSGVHTFPAVLQSSGLYSLSSVVTVPSSNFGTQTYTCNVDHKPSNTKVDKTVERKC";
+{
+  assert(
+    PANITUMUMAB_FAB_HC.includes(HUMAN_IGHG2_CH_PREFIX()),
+    "panitumumab Fab CH matches IGHG2 through hinge Cys",
+  );
+  const full = PANITUMUMAB_FAB_HC + CONST_REGION_DB.human.CH.IGHG2.s.slice(102);
+  const hit = findConstantRegion(full);
+  assert(hit && hit.isotype === "IGHG2", "panitumumab: IGHG2");
+  const euCols = mapEuOntoConstantAlignment(hit.aligned2, hit.species, hit.isotype);
+  assert(hit.aligned1[euCols.indexOf(219)] === "C", "panitumumab: C219 (IgG2 hinge)");
+  assert(hit.aligned1[euCols.indexOf(220)] === "C", "panitumumab: C220");
+  assert(euCols.indexOf(221) === -1, "panitumumab IgG2: no Eu 221");
+  assert(euCols.indexOf(233) === -1, "panitumumab IgG2: no Eu 233");
+  assert(hit.aligned1[euCols.indexOf(297)] === "N", "panitumumab: N297");
+  assert(hit.aligned1[euCols.indexOf(234)] === "P", "panitumumab: P234 (APPVAG)");
+}
+
+function HUMAN_IGHG2_CH_PREFIX() {
+  return CONST_REGION_DB.human.CH.IGHG2.s.slice(0, 102);
+}
+
+// IgG1 Fc fragment PDB 4X4M — CH2–CH3 body matches IGHG1 from A231
+// https://www.rcsb.org/structure/4X4M (chain sequence begins CPAPELL…;
+// residues after the leading C are identical to IGHG1 Eu 231–447).
+const IGG1_FC_4X4M =
+  "CPAPELLGGPSVFLFPPKPKDTLMISRTPEVTCVVVDVSHEDPEVKFNWYVDGVEVHNAKTKPREEQYNSTYRVVSVLTVLHQDWLNGKEYKCKVSNKALPAPIEKTISKAKGQPREPQVYTLPPSRDELTKNQVSLTCLVKGFYPSDIAVEWESNGQPENNYKTTPPVLDSDGSFFLYSKLTVDKSRWQQGNVFSCSVMHEALHNHYTQKSLSLSPGK";
+{
+  const g1 = CONST_REGION_DB.human.CH.IGHG1.s;
+  assert(g1.indexOf("APELLGG") === 113, "IGHG1 CH2 starts at index 113 (Eu 231)");
+  // 4X4M is C229 + P230–K447 (common Fc crystal start at the last hinge Cys)
+  assert(
+    IGG1_FC_4X4M === "C" + g1.slice(112),
+    "4X4M Fc equals C229 + IGHG1 Eu 230–447",
+  );
+  assert(aaAtEu("IGHG1", g1, 297) === "N", "4X4M/IGHG1 N297");
+  assert(aaAtEu("IGHG1", g1, 329) === "P", "4X4M/IGHG1 P329");
+}
+
+// Isotype-specific hinge difference: same Eu 228 is S (IgG4 WT), P (IgG1), or absent numbering path
+assert(aaAtEu("IGHG1", CONST_REGION_DB.human.CH.IGHG1.s, 228) === "P", "IGHG1 P228");
+assert(aaAtEu("IGHG4", CONST_REGION_DB.human.CH.IGHG4.s, 228) === "S", "IGHG4 S228");
+assert(aaAtEu("IGHG2", CONST_REGION_DB.human.CH.IGHG2.s, 228) === "P", "IGHG2 P228");
+
 // ============================================================
 // alignJGene (semi-global: free prefix + free suffix, ref fully consumed)
 // Real IMGT J gene sequences and antibody variable regions throughout.
