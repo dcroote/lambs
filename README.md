@@ -13,7 +13,7 @@ Code is open source, permissively licensed under Apache 2.0, and available at [h
 - **Developability liability identification**: deamidation, isomerization, glycosylation, unpaired cysteines, and more.
 - **Germline gene identification and alignment**: human and mouse with annotation of somatic hypermutation and CDRs.
 - **VH and VL chain properties**: length, molecular weight, theoretical pI, net charge at pH 7.4 and 5.5, and GRAVY with percentiles and quartiles versus approved therapeutic mAb sequences.
-- **Constant region identification**: human and mouse with alignments showing similarity to wildtype constant regions. Human IgG (IGHG1–4) CH alignments include an EU numbering row above the raw residue ruler, after isotype determination.
+- **Constant region identification**: human and mouse with alignments showing similarity to wildtype constant regions. Human IgG (IGHG1–4) CH alignments include an EU numbering row, gap markers and an isotype legend for non-IgG1 discontinuities, and a hover popup on reference/query residues showing ref AA, query AA, and EU index.
 - **Batch analysis**: clonal-family clustering by V gene, J gene, CDR3 length, and adjustable CDR3 similarity with multiple sequence alignment, AA conservation plots, and consensus sequences per family. Accepts CSV upload.
 - **Verified analysis logic**: core algorithms are covered by extensive unit tests; run locally with `node test.js`.
 - **Privacy**: everything runs locally in the browser. No tracking and no data is sent anywhere.

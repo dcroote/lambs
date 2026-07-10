@@ -379,6 +379,30 @@ limitations under the License.
       color: #999;
     }
 
+    .eu-gap-char {
+      color: var(--accent);
+      font-weight: bold;
+    }
+
+    .ch-eu-tooltip {
+      position: fixed;
+      z-index: 1000;
+      pointer-events: none;
+      background: var(--surface-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-md);
+      padding: 4px 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .ch-aa-tip {
+      cursor: default;
+    }
+
     .seq-char {
       color: #1a1a1a;
     }
@@ -2843,8 +2867,8 @@ limitations under the License.
         const num = String(pos);
         const col = pos - 1;
         for (let k = 0; k < num.length; k++) {
-          const c = col - (num.length - 1) + k;
-          if (c >= 0 && c < length) chars[c] = num[k];
+          const c = col + k;
+          if (c < length) chars[c] = num[k];
         }
       }
       return chars;
@@ -2916,11 +2940,56 @@ limitations under the License.
     }
 
     /**
-     * Build a ruler string for Eu indices: label columns whose Eu number
-     * is 1 or a multiple of 10 (right-aligned, same convention as buildRuler).
-     * Columns with null Eu stay blank.
+     * Columns where EU numbering is discontinuous: jumps (e.g. 220→222) or
+     * the start of an unnumbered residue run (IgG3 extended hinge).
+     * Alignment gaps in the reference (aligned2[i] === '-') are ignored.
      */
-    function buildEuRuler(euPerColumn) {
+    function euDiscontinuityColumns(euPerColumn, aligned2) {
+      const cols = [];
+      if (!euPerColumn) return cols;
+      let prevEu = null;
+      let inUnnumberedRun = false;
+      for (let i = 0; i < euPerColumn.length; i++) {
+        if (aligned2 && aligned2[i] === '-') {
+          inUnnumberedRun = false;
+          continue;
+        }
+        const eu = euPerColumn[i];
+        if (eu == null) {
+          if (!inUnnumberedRun) {
+            cols.push(i);
+            inUnnumberedRun = true;
+          }
+        } else {
+          inUnnumberedRun = false;
+          if (prevEu != null && eu !== prevEu + 1) cols.push(i);
+          prevEu = eu;
+        }
+      }
+      return cols;
+    }
+
+    /** Legend for isotypes with EU gaps, or null when continuous / N/A. */
+    function euGapLegendText(isotype) {
+      if (isotype === 'IGHG2') {
+        return 'EU numbering has gaps: hinge skips 221, 223, 225; CH2 skips 233. / marks discontinuities.';
+      }
+      if (isotype === 'IGHG4') {
+        return 'EU numbering has gaps: hinge skips 221–223. / marks discontinuities.';
+      }
+      if (isotype === 'IGHG3') {
+        return 'EU numbering has gaps: extended hinge mostly unnumbered. / marks discontinuities.';
+      }
+      return null;
+    }
+
+    /**
+     * Build a ruler string for Eu indices: label columns whose Eu number
+     * is 1 or a multiple of 10 (left-aligned, same convention as buildRuler).
+     * Columns with null Eu stay blank. If gapColumnSet is provided, any label
+     * that would overlap a discontinuity column is omitted entirely.
+     */
+    function buildEuRuler(euPerColumn, gapColumnSet) {
       const length = euPerColumn.length;
       const chars = new Array(length).fill(' ');
       for (let i = 0; i < length; i++) {
@@ -2928,21 +2997,52 @@ limitations under the License.
         if (eu == null) continue;
         if (eu !== 1 && eu % 10 !== 0) continue;
         const num = String(eu);
+        let overlapsGap = false;
+        if (gapColumnSet) {
+          for (let k = 0; k < num.length; k++) {
+            if (gapColumnSet[i + k]) {
+              overlapsGap = true;
+              break;
+            }
+          }
+        }
+        if (overlapsGap) continue;
         for (let k = 0; k < num.length; k++) {
-          const c = i - (num.length - 1) + k;
-          if (c >= 0 && c < length) chars[c] = num[k];
+          const c = i + k;
+          if (c < length) chars[c] = num[k];
         }
       }
       return chars;
     }
 
-    function renderEuNumberingRow(euPerColumn, labelClass) {
-      const ruler = buildEuRuler(euPerColumn);
+    function renderEuNumberingRow(euPerColumn, labelClass, aligned2) {
+      const gapCols = euDiscontinuityColumns(euPerColumn, aligned2);
+      const gapSet = Object.create(null);
+      for (let g = 0; g < gapCols.length; g++) gapSet[gapCols[g]] = true;
+      const ruler = buildEuRuler(euPerColumn, gapSet);
       let h = '<div class="track-row"><span class="track-label ' + labelClass + '">EU:</span>';
       for (let i = 0; i < ruler.length; i++) {
-        h += '<span class="ruler-char">' + ruler[i] + '</span>';
+        if (gapSet[i]) {
+          h += '<span class="eu-gap-char">/</span>';
+        } else if (ruler[i] !== ' ') {
+          h += '<span class="ruler-char">' + ruler[i] + '</span>';
+        } else {
+          h += '<span class="ruler-char"> </span>';
+        }
       }
       return h + '</div>';
+    }
+
+    /** CH alignment AA span with hover data for ref / query / EU. */
+    function chAaTipSpan(displayChar, refAa, queryAa, eu) {
+      const euStr = eu == null ? '—' : String(eu);
+      const prop = AA_PROPERTY[displayChar];
+      let cls = 'seq-char ch-aa-tip';
+      if (prop) cls += ' aa-' + prop;
+      return '<span class="' + cls +
+        '" data-ref="' + refAa +
+        '" data-query="' + queryAa +
+        '" data-eu="' + euStr + '">' + displayChar + '</span>';
     }
 
     // ================================================================
@@ -4034,25 +4134,56 @@ limitations under the License.
       const colSpec = { type: 'aligned', alen };
       const speciesLabel = constMatch.species.charAt(0).toUpperCase() + constMatch.species.slice(1);
       const pct = (constMatch.identity * 100).toFixed(1);
+      const isCh = chainLabel === 'CH' || constMatch.regionKind === 'CH';
 
       let inner = '<div class="germline-info">Isotype: <strong>' + constMatch.isotype +
         '</strong> | Species: <strong>' + speciesLabel +
         '</strong> | Identity: <strong>' + pct + '%</strong> (' +
         constMatch.matches + '/' + constMatch.total + ' positions)</div>';
 
-      let refBody = '<div class="track-block">';
+      const gapLegend = euGapLegendText(constMatch.isotype);
+      if (gapLegend) {
+        inner += '<div class="germline-info" style="color:var(--text-muted);font-size:0.8125rem">' +
+          escapeHtml(gapLegend) + '</div>';
+      }
+
+      let refBody = '<div class="track-block ch-ref-alignment">';
 
       const euCols = mapEuOntoConstantAlignment(
         constMatch.aligned2, constMatch.species, constMatch.isotype
       );
-      if (euCols) refBody += renderEuNumberingRow(euCols, lbl);
+      if (euCols) refBody += renderEuNumberingRow(euCols, lbl, constMatch.aligned2);
       refBody += renderRulerRow(alen, lbl);
-      refBody += renderGermlineGeneRowHtml(lbl, { gene: constMatch.isotype }, constMatch.aligned2, colSpec);
+
+      if (isCh) {
+        let gRow = '<div class="track-row"><span class="track-label ' + lbl + '">' +
+          constMatch.isotype + ':</span>';
+        for (let k = 0; k < alen; k++) {
+          const refAa = constMatch.aligned2[k];
+          const queryAa = constMatch.aligned1[k];
+          const eu = euCols ? euCols[k] : null;
+          if (refAa === '-') {
+            gRow += chAaTipSpan('-', refAa, queryAa, eu);
+          } else {
+            gRow += chAaTipSpan(refAa, refAa, queryAa, eu);
+          }
+        }
+        refBody += gRow + '</div>';
+      } else {
+        refBody += renderGermlineGeneRowHtml(lbl, { gene: constMatch.isotype }, constMatch.aligned2, colSpec);
+      }
       refBody += renderGermlineMismatchRowHtml(lbl, constMatch.aligned1, constMatch.aligned2, colSpec);
 
       let sRow = '<div class="track-row"><span class="track-label ' + lbl + '">Sequence:</span>';
       for (let k = 0; k < alen; k++) {
-        sRow += constMatch.aligned1[k] === '-' ? '<span class="seq-char">-</span>' : seqCharSpan(constMatch.aligned1[k]);
+        const refAa = constMatch.aligned2[k];
+        const queryAa = constMatch.aligned1[k];
+        const eu = euCols ? euCols[k] : null;
+        if (isCh) {
+          sRow += chAaTipSpan(queryAa === '-' ? '-' : queryAa, refAa, queryAa, eu);
+        } else {
+          sRow += queryAa === '-' ? '<span class="seq-char">-</span>' : seqCharSpan(queryAa);
+        }
       }
       refBody += sRow + '</div>';
 
@@ -5376,6 +5507,57 @@ PA13P3G09,QEQLVESGGGVVHPGGSLRLSCVASAFTFNRFGMHWVRQAPGKGLEWVAVISNDGRSQDYADSVKGRFII
     }
 
     document.getElementById('analyze-btn').addEventListener('click', analyze);
+
+    // CH alignment hover: ref / query / EU (delegated, no external deps)
+    (function setupChAaTooltips() {
+      let tip = document.getElementById('ch-eu-tooltip');
+      if (!tip) {
+        tip = document.createElement('div');
+        tip.id = 'ch-eu-tooltip';
+        tip.className = 'ch-eu-tooltip';
+        tip.setAttribute('role', 'tooltip');
+        tip.hidden = true;
+        document.body.appendChild(tip);
+      }
+      function hideTip() { tip.hidden = true; }
+      function showTip(el, clientX, clientY) {
+        tip.textContent = 'Ref: ' + el.getAttribute('data-ref') +
+          '  Query: ' + el.getAttribute('data-query') +
+          '  EU: ' + el.getAttribute('data-eu');
+        tip.hidden = false;
+        const pad = 12;
+        let left = clientX + pad;
+        let top = clientY + pad;
+        tip.style.left = left + 'px';
+        tip.style.top = top + 'px';
+        const rect = tip.getBoundingClientRect();
+        if (rect.right > window.innerWidth - 4) {
+          left = Math.max(4, clientX - rect.width - pad);
+          tip.style.left = left + 'px';
+        }
+        if (rect.bottom > window.innerHeight - 4) {
+          top = Math.max(4, clientY - rect.height - pad);
+          tip.style.top = top + 'px';
+        }
+      }
+      document.addEventListener('mouseover', function (e) {
+        const el = e.target.closest && e.target.closest('.ch-aa-tip');
+        if (!el) return;
+        showTip(el, e.clientX, e.clientY);
+      });
+      document.addEventListener('mousemove', function (e) {
+        const el = e.target.closest && e.target.closest('.ch-aa-tip');
+        if (!el || tip.hidden) return;
+        showTip(el, e.clientX, e.clientY);
+      });
+      document.addEventListener('mouseout', function (e) {
+        const el = e.target.closest && e.target.closest('.ch-aa-tip');
+        if (!el) return;
+        const rel = e.relatedTarget;
+        if (rel && rel.closest && rel.closest('.ch-aa-tip') === el) return;
+        hideTip();
+      });
+    })();
 
     document.getElementById('copy-json-btn').addEventListener('click', function () {
       copyLambsReportJson('copy-json-btn', 'lambs-last-report');

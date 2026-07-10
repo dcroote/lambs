@@ -91,6 +91,8 @@ const wrappedJS = `
   exports.HUMAN_IGHG_EU_NUMBERING = HUMAN_IGHG_EU_NUMBERING;
   exports.getHumanIgGEuNumbers = getHumanIgGEuNumbers;
   exports.mapEuOntoConstantAlignment = mapEuOntoConstantAlignment;
+  exports.euDiscontinuityColumns = euDiscontinuityColumns;
+  exports.euGapLegendText = euGapLegendText;
   exports.buildEuRuler = buildEuRuler;
   exports.renderEuNumberingRow = renderEuNumberingRow;
   exports.renderConstantRegionPanel = renderConstantRegionPanel;
@@ -157,6 +159,8 @@ const {
   HUMAN_IGHG_EU_NUMBERING,
   getHumanIgGEuNumbers,
   mapEuOntoConstantAlignment,
+  euDiscontinuityColumns,
+  euGapLegendText,
   buildEuRuler,
   renderEuNumberingRow,
   renderConstantRegionPanel,
@@ -317,8 +321,8 @@ section("buildRuler");
 
 const r25 = buildRuler(25).join("");
 assert(r25[0] === "1", "position 1 at column 0");
-assert(r25[8] === "1" && r25[9] === "0", "position 10 at columns 8-9");
-assert(r25[18] === "2" && r25[19] === "0", "position 20 at columns 18-19");
+assert(r25[9] === "1" && r25[10] === "0", "position 10 left-aligned at columns 9-10");
+assert(r25[19] === "2" && r25[20] === "0", "position 20 left-aligned at columns 19-20");
 assert(r25.length === 25, "ruler length matches input");
 
 const r5 = buildRuler(5).join("");
@@ -327,8 +331,8 @@ assert(r5.length === 5, "short ruler correct length");
 
 const r110 = buildRuler(110).join("");
 assert(
-  r110[97] === "1" && r110[98] === "0" && r110[99] === "0",
-  "position 100 right-aligned to column 99",
+  r110[99] === "1" && r110[100] === "0" && r110[101] === "0",
+  "position 100 left-aligned at column 99",
 );
 
 // ============================================================
@@ -3114,7 +3118,7 @@ for (const iso of ["IGHG1", "IGHG2", "IGHG3", "IGHG4"]) {
   assert(mapped[4] === 122 && mapped[6] === 123, "mapEu: Eu continues across ref gap");
 }
 
-// buildEuRuler labels multiples of 10
+// buildEuRuler labels multiples of 10 (left-aligned)
 {
   const mapped = mapEuOntoConstantAlignment(
     CONST_REGION_DB.human.CH.IGHG1.s,
@@ -3126,8 +3130,80 @@ for (const iso of ["IGHG1", "IGHG2", "IGHG3", "IGHG4"]) {
   const col300 = mapped.indexOf(300);
   assert(ruler.join("").includes("120"), "buildEuRuler includes 120");
   assert(ruler.join("").includes("300"), "buildEuRuler includes 300");
-  assert(ruler[col120] === "0", "buildEuRuler right-aligns 120 on column");
-  assert(ruler[col300] === "0", "buildEuRuler right-aligns 300 on column");
+  assert(ruler[col120] === "1", "buildEuRuler left-aligns 120 on column");
+  assert(ruler[col300] === "3", "buildEuRuler left-aligns 300 on column");
+  assert(euDiscontinuityColumns(mapped, CONST_REGION_DB.human.CH.IGHG1.s).length === 0,
+    "IGHG1 has no EU discontinuities");
+  assert(euGapLegendText("IGHG1") === null, "IGHG1 has no gap legend");
+}
+
+// EU discontinuities and legends for non-IgG1
+{
+  const g2 = CONST_REGION_DB.human.CH.IGHG2.s;
+  const mapped2 = mapEuOntoConstantAlignment(g2, "human", "IGHG2");
+  const gaps2 = euDiscontinuityColumns(mapped2, g2);
+  assert(gaps2.includes(mapped2.indexOf(222)), "IGHG2 discontinuity at Eu 222");
+  assert(gaps2.includes(mapped2.indexOf(224)), "IGHG2 discontinuity at Eu 224");
+  assert(gaps2.includes(mapped2.indexOf(226)), "IGHG2 discontinuity at Eu 226");
+  assert(gaps2.includes(mapped2.indexOf(234)), "IGHG2 discontinuity at Eu 234");
+  const leg2 = euGapLegendText("IGHG2");
+  assert(leg2 && leg2.includes("221, 223, 225") && leg2.includes("233"),
+    "IGHG2 legend lists hinge and CH2 skips");
+  assert(leg2.includes("/"), "IGHG2 legend mentions slash marker");
+  assert(leg2.includes("^") === false, "IGHG2 legend does not use caret");
+
+  const g4 = CONST_REGION_DB.human.CH.IGHG4.s;
+  const mapped4 = mapEuOntoConstantAlignment(g4, "human", "IGHG4");
+  const gaps4 = euDiscontinuityColumns(mapped4, g4);
+  assert(gaps4.includes(mapped4.indexOf(224)), "IGHG4 discontinuity at Eu 224");
+  const leg4 = euGapLegendText("IGHG4");
+  assert(leg4 && leg4.includes("221–223"), "IGHG4 legend lists hinge skips");
+  assert(!leg4.includes("233"), "IGHG4 legend does not mention 233");
+  assert(leg4.includes("/"), "IGHG4 legend mentions slash marker");
+
+  const g3 = CONST_REGION_DB.human.CH.IGHG3.s;
+  const mapped3 = mapEuOntoConstantAlignment(g3, "human", "IGHG3");
+  const gaps3 = euDiscontinuityColumns(mapped3, g3);
+  assert(gaps3.length >= 1, "IGHG3 has unnumbered-run markers");
+  assert(gaps3.length < 40, "IGHG3 does not mark every unnumbered residue");
+  // First unnumbered after Eu 218 (hinge positions 4–5)
+  assert(mapped3[gaps3[0]] === null, "IGHG3 first gap marker is unnumbered run start");
+  const leg3 = euGapLegendText("IGHG3");
+  assert(leg3 && leg3.includes("extended hinge"), "IGHG3 legend mentions extended hinge");
+  assert(!/\b221\b/.test(leg3) && !leg3.includes("221,"),
+    "IGHG3 legend does not list individual skips");
+  assert(leg3.includes("/"), "IGHG3 legend mentions slash marker");
+}
+
+// renderEuNumberingRow: slash markers; omit decade labels that overlap gaps
+{
+  const g2 = CONST_REGION_DB.human.CH.IGHG2.s;
+  const mapped2 = mapEuOntoConstantAlignment(g2, "human", "IGHG2");
+  const gapSet = Object.create(null);
+  for (const c of euDiscontinuityColumns(mapped2, g2)) gapSet[c] = true;
+  const rulerWithGaps = buildEuRuler(mapped2, gapSet);
+  const col220 = mapped2.indexOf(220);
+  // "220" left-aligned would cover gap columns at 222/224 — entire label omitted
+  assert(rulerWithGaps[col220] === " ", "IGHG2 omits Eu 220 label when it overlaps gaps");
+  assert(!rulerWithGaps.join("").includes("220"), "IGHG2 ruler has no 220 digits when gaps overlap");
+
+  const g4 = CONST_REGION_DB.human.CH.IGHG4.s;
+  const mapped4 = mapEuOntoConstantAlignment(g4, "human", "IGHG4");
+  const gapSet4 = Object.create(null);
+  for (const c of euDiscontinuityColumns(mapped4, g4)) gapSet4[c] = true;
+  const ruler4 = buildEuRuler(mapped4, gapSet4);
+  const col220g4 = mapped4.indexOf(220);
+  assert(ruler4[col220g4] === " ", "IGHG4 omits Eu 220 label when it overlaps gap at 224");
+
+  const html = renderEuNumberingRow(mapped2, "alignment-label", g2);
+  assert(html.includes('class="eu-gap-char">/</span>'), "EU row includes slash gap markers");
+  assert(!html.includes(">^<") && !html.includes("eu-gap-char\">^"), "EU row does not use caret");
+  const euText = html.replace(/<[^>]+>/g, "");
+  assert(!euText.includes("220"), "rendered EU row has no partial 220 label");
+  const slashes = (html.match(/eu-gap-char">\//g) || []).length;
+  assert(slashes >= 3, "IGHG2 EU row shows multiple slash gap markers");
+  // Non-overlapping decades still appear
+  assert(euText.includes("210") && euText.includes("230"), "non-overlapping decades still labeled");
 }
 
 // Panel HTML: EU row above raw ruler for human IgG; absent otherwise
@@ -3147,6 +3223,10 @@ for (const iso of ["IGHG1", "IGHG2", "IGHG3", "IGHG4"]) {
   const euText = euRowMatch[1].replace(/<[^>]+>/g, "");
   assert(euText.includes("120") && euText.includes("300"),
     "EU row shows Eu decade labels (120, 300)");
+  assert(!html.includes("EU numbering has gaps"), "IGHG1 panel has no gap legend");
+  assert(html.includes("ch-aa-tip"), "CH panel includes hover tip spans");
+  assert(html.includes('data-eu="297"') || html.includes("data-eu=\"297\""),
+    "CH tip includes Eu 297");
 }
 {
   const hit = findConstantRegion(TEST_VAR_REGION + HUMAN_IGKC_CL);
@@ -3155,6 +3235,26 @@ for (const iso of ["IGHG1", "IGHG2", "IGHG3", "IGHG4"]) {
     !html.includes(">EU:</span>"),
     "renderConstantRegionPanel: no EU row for IGKC",
   );
+  assert(!html.includes("ch-aa-tip"), "CL panel has no CH hover tips");
+}
+
+// Gap legends in CH panels for G2/G3/G4
+{
+  const hit2 = findConstantRegion(TEST_VAR_REGION + CONST_REGION_DB.human.CH.IGHG2.s);
+  const html2 = renderConstantRegionPanel(hit2, "CH");
+  assert(html2.includes("221, 223, 225") && html2.includes("233"),
+    "IGHG2 panel legend lists skips");
+  assert(html2.includes("eu-gap-char"), "IGHG2 panel has gap markers");
+
+  const hit4 = findConstantRegion(TEST_VAR_REGION + CONST_REGION_DB.human.CH.IGHG4.s);
+  const html4 = renderConstantRegionPanel(hit4, "CH");
+  assert(html4.includes("221–223"), "IGHG4 panel legend lists hinge skips");
+
+  const hit3 = findConstantRegion(TEST_VAR_REGION + CONST_REGION_DB.human.CH.IGHG3.s);
+  const html3 = renderConstantRegionPanel(hit3, "CH");
+  assert(html3.includes("extended hinge mostly unnumbered"),
+    "IGHG3 panel has extended-hinge note");
+  assert(!html3.includes("221, 223, 225"), "IGHG3 panel does not list G2-style skips");
 }
 
 // --- Real therapeutics (provenance in comments) ---
