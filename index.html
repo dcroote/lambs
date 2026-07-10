@@ -2851,6 +2851,101 @@ limitations under the License.
     }
 
     // ================================================================
+    // HUMAN IgG EU NUMBERING (Edelman / EU index)
+    // ================================================================
+    // Correspondence tables from IMGT Scientific chart:
+    // https://imgt.org/IMGTScientificChart/Numbering/Hu_IGHGnber.html
+    // Arrays are parallel to CONST_REGION_DB.human.CH[isotype].s (one
+    // entry per mature-protein residue). null = residue present in the
+    // isotype but without an Eu index (IgG3 extended hinge).
+    // Hinge Eu indices differ by isotype (IgG1 continuous 216–230;
+    // IgG2/IgG4 skip residues; IgG3 mostly unnumbered outside H1/H4).
+    // IgG2 CH2 also omits Eu 233 (IMGT note: codon 1.4 deletion).
+    const HUMAN_IGHG_EU_NUMBERING = (function () {
+      const ch1 = [];
+      for (let n = 118; n <= 215; n++) ch1.push(n);
+      const ch3 = [];
+      for (let n = 341; n <= 447; n++) ch3.push(n);
+      const ch2Full = [];
+      for (let n = 231; n <= 340; n++) ch2Full.push(n);
+      const ch2IgG2 = [231, 232];
+      for (let n = 234; n <= 340; n++) ch2IgG2.push(n);
+      const hinge1 = [];
+      for (let n = 216; n <= 230; n++) hinge1.push(n);
+      const hinge2 = [216, 217, 218, 219, 220, 222, 224, 226, 227, 228, 229, 230];
+      const hinge4 = [216, 217, 218, 219, 220, 224, 225, 226, 227, 228, 229, 230];
+      const hinge3 = [216, 217, 218, null, null, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, null, null];
+      for (let i = 0; i < 15; i++) hinge3.push(null); // H2
+      for (let i = 0; i < 15; i++) hinge3.push(null); // H3
+      for (let i = 0; i < 13; i++) hinge3.push(null); // H4 prefix
+      hinge3.push(229, 230);
+      return {
+        IGHG1: ch1.concat(hinge1, ch2Full, ch3),
+        IGHG2: ch1.concat(hinge2, ch2IgG2, ch3),
+        IGHG3: ch1.concat(hinge3, ch2Full, ch3),
+        IGHG4: ch1.concat(hinge4, ch2Full, ch3)
+      };
+    })();
+
+    /** Eu index array for a human IGHG isotype, or null if not applicable. */
+    function getHumanIgGEuNumbers(isotype) {
+      if (!isotype) return null;
+      return HUMAN_IGHG_EU_NUMBERING[isotype] || null;
+    }
+
+    /**
+     * Map Eu numbers onto constant-region alignment columns using the
+     * reference row (aligned2). Gaps in the reference (query insertions /
+     * free suffix) get null. Only for human IGHG1–4.
+     */
+    function mapEuOntoConstantAlignment(aligned2, species, isotype) {
+      if (species !== 'human') return null;
+      const refEu = getHumanIgGEuNumbers(isotype);
+      if (!refEu || !aligned2) return null;
+      const out = new Array(aligned2.length);
+      let ri = 0;
+      for (let i = 0; i < aligned2.length; i++) {
+        if (aligned2[i] === '-') {
+          out[i] = null;
+        } else {
+          out[i] = ri < refEu.length ? refEu[ri] : null;
+          ri++;
+        }
+      }
+      return out;
+    }
+
+    /**
+     * Build a ruler string for Eu indices: label columns whose Eu number
+     * is 1 or a multiple of 10 (right-aligned, same convention as buildRuler).
+     * Columns with null Eu stay blank.
+     */
+    function buildEuRuler(euPerColumn) {
+      const length = euPerColumn.length;
+      const chars = new Array(length).fill(' ');
+      for (let i = 0; i < length; i++) {
+        const eu = euPerColumn[i];
+        if (eu == null) continue;
+        if (eu !== 1 && eu % 10 !== 0) continue;
+        const num = String(eu);
+        for (let k = 0; k < num.length; k++) {
+          const c = i - (num.length - 1) + k;
+          if (c >= 0 && c < length) chars[c] = num[k];
+        }
+      }
+      return chars;
+    }
+
+    function renderEuNumberingRow(euPerColumn, labelClass) {
+      const ruler = buildEuRuler(euPerColumn);
+      let h = '<div class="track-row"><span class="track-label ' + labelClass + '">EU:</span>';
+      for (let i = 0; i < ruler.length; i++) {
+        h += '<span class="ruler-char">' + ruler[i] + '</span>';
+      }
+      return h + '</div>';
+    }
+
+    // ================================================================
     // SEQUENCE LIABILITY DETECTION
     // ================================================================
 
@@ -3947,6 +4042,10 @@ limitations under the License.
 
       let refBody = '<div class="track-block">';
 
+      const euCols = mapEuOntoConstantAlignment(
+        constMatch.aligned2, constMatch.species, constMatch.isotype
+      );
+      if (euCols) refBody += renderEuNumberingRow(euCols, lbl);
       refBody += renderRulerRow(alen, lbl);
       refBody += renderGermlineGeneRowHtml(lbl, { gene: constMatch.isotype }, constMatch.aligned2, colSpec);
       refBody += renderGermlineMismatchRowHtml(lbl, constMatch.aligned1, constMatch.aligned2, colSpec);
@@ -5387,6 +5486,8 @@ PA13P3G09,QEQLVESGGGVVHPGGSLRLSCVASAFTFNRFGMHWVRQAPGKGLEWVAVISNDGRSQDYADSVKGRFII
       analyzeMabReportFromRaw: analyzeMabReportFromRaw,
       buildClusterReport: buildClusterReport,
       lambsReportToJSON: lambsReportToJSON,
+      getHumanIgGEuNumbers: getHumanIgGEuNumbers,
+      mapEuOntoConstantAlignment: mapEuOntoConstantAlignment,
       lastReport: null,
       lastClusterReport: null,
       analyzeSingle: function (vhRaw, vlRaw) {

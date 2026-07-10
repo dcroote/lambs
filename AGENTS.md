@@ -27,6 +27,8 @@ Your job is to run analysis and consume **structured results**, not to edit the 
 | `LAMBS.analyzeMabReport(vhSeq, vlSeq)` | Report from **cleaned** AA strings |
 | `LAMBS.buildChainReport(varSeq, 'VH' \| 'VL')` | Variable-region chain report |
 | `LAMBS.buildClusterReport(basket, threshold, filterNames)` | Cluster report |
+| `LAMBS.getHumanIgGEuNumbers(isotype)` | Eu index array for `IGHG1`–`IGHG4`, else `null` (IMGT Hu_IGHGnber) |
+| `LAMBS.mapEuOntoConstantAlignment(aligned2, species, isotype)` | Per-column Eu numbers for a CH alignment, or `null` |
 | `LAMBS.lambsReportToJSON(report)` | JSON string (no `_constMatch` / alignment blobs) |
 | `LAMBS.lastReport` | Last single-tab report after **Analyze** |
 | `LAMBS.lastClusterReport` | Last cluster report after **Cluster & Analyze** |
