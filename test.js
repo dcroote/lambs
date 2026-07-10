@@ -3227,6 +3227,10 @@ for (const iso of ["IGHG1", "IGHG2", "IGHG3", "IGHG4"]) {
   assert(html.includes("ch-aa-tip"), "CH panel includes hover tip spans");
   assert(html.includes('data-eu="297"') || html.includes("data-eu=\"297\""),
     "CH tip includes Eu 297");
+  assert(
+    html.includes("Hover an amino acid for Reference AA, EU number, and Query AA (e.g. S228P)."),
+    "CH panel mentions hover tooltip format",
+  );
 }
 {
   const hit = findConstantRegion(TEST_VAR_REGION + HUMAN_IGKC_CL);
@@ -3236,6 +3240,10 @@ for (const iso of ["IGHG1", "IGHG2", "IGHG3", "IGHG4"]) {
     "renderConstantRegionPanel: no EU row for IGKC",
   );
   assert(!html.includes("ch-aa-tip"), "CL panel has no CH hover tips");
+  assert(
+    !html.includes("Hover an amino acid"),
+    "CL panel has no CH hover hint",
+  );
 }
 
 // Gap legends in CH panels for G2/G3/G4

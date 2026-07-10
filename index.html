@@ -4188,6 +4188,10 @@ limitations under the License.
       refBody += sRow + '</div>';
 
       refBody += '</div>';
+      if (isCh) {
+        refBody += '<div class="germline-info" style="color:var(--text-muted);font-size:0.8125rem;margin-top:6px">' +
+          'Hover an amino acid for Reference AA, EU number, and Query AA (e.g. S228P).</div>';
+      }
       inner += collapsibleSectionHtml('Reference Alignment', refBody, true);
       return collapsiblePanelHtml('chain-panel', chainLabel + ' Chain Analysis', inner, true);
     }
@@ -5521,9 +5525,9 @@ PA13P3G09,QEQLVESGGGVVHPGGSLRLSCVASAFTFNRFGMHWVRQAPGKGLEWVAVISNDGRSQDYADSVKGRFII
       }
       function hideTip() { tip.hidden = true; }
       function showTip(el, clientX, clientY) {
-        tip.textContent = 'Ref: ' + el.getAttribute('data-ref') +
-          '  Query: ' + el.getAttribute('data-query') +
-          '  EU: ' + el.getAttribute('data-eu');
+        tip.textContent = el.getAttribute('data-ref') +
+          el.getAttribute('data-eu') +
+          el.getAttribute('data-query');
         tip.hidden = false;
         const pad = 12;
         let left = clientX + pad;
