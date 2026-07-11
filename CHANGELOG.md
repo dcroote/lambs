@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
-## [0.11.1](https://github.com/dcroote/lambs/compare/v0.11.0...v0.11.1) (2026-07-11)
+## [0.12.0](https://github.com/dcroote/lambs/compare/v0.11.0...v0.12.0) (2026-07-11)
 
 
 ### Features
