@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [0.11.1](https://github.com/dcroote/lambs/compare/v0.11.0...v0.11.1) (2026-07-11)
+
+
+### Features
+
+* add EU numbering for human IgG CH Chain Analysis ([#5](https://github.com/dcroote/lambs/issues/5)) ([e566f67](https://github.com/dcroote/lambs/commit/e566f678e171e7d7864fd594e751b4beeab15941))
+* improve EU numbering of CH with tooltip and break annotation ([89c93b7](https://github.com/dcroote/lambs/commit/89c93b7989ae4e6b5d841945673a7c2008f6131f))
+
+
+### Bug Fixes
+
+* use standard mutation format e.g. S228P on CH AA hover ([ef7981f](https://github.com/dcroote/lambs/commit/ef7981f4579f6238d24029dc26f089c7bae12200))
+
 ## [0.11.0](https://github.com/dcroote/lambs/compare/v0.10.1...v0.11.0) (2026-06-23)
 
 ### Features
