@@ -4,7 +4,8 @@
   "description": "LAMBS - Local Analysis of mAb Sequences",
   "scripts": {
     "release": "commit-and-tag-version --config ./scripts/version-updater/versionrc.cjs",
-    "screenshots": "node scripts/capture-readme-screenshots.mjs"
+    "screenshots": "node scripts/capture-readme-screenshots.mjs",
+    "verify-ui": "node scripts/verify-ui.mjs"
   },
   "devDependencies": {
     "commit-and-tag-version": "12.7.1",

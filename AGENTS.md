@@ -152,3 +152,43 @@ node test.js
 - Add or extend APIs on **`window.LAMBS`** inside `index.html`.
 - Document JSON field changes here under **Using LAMBS** (`reportVersion` bumps if breaking).
 - Prefer **Copy JSON** / `lambsReportToJSON` over new DOM scraping hooks.
+
+---
+
+## Cursor Cloud specific instructions
+
+LAMBS is a **zero-backend** product: one `index.html` file runs entirely in the browser. No database, API server, or Docker is required.
+
+### Verify logic (CI-equivalent)
+
+```bash
+node test.js
+```
+
+Requires **Node.js only** — no `pnpm install`. CI uses Node 24; Node 22+ works locally.
+
+There is **no lint command** configured (no ESLint/Prettier in the repo).
+
+### Run the application
+
+Open `index.html` in a browser (`file://` or static server). For a headless UI smoke test covering **both** tabs (Single mAb Analysis + Multiple mAb Analysis with built-in example sequences):
+
+```bash
+pnpm install
+pnpm exec playwright install chromium   # one-time per VM; not in update script
+node scripts/verify-ui.mjs
+```
+
+This loads the Trastuzumab example on the Single tab, runs **Analyze**, then switches to Multiple mAb Analysis, loads the 4-sequence example CSV, runs **Cluster & Analyze**, and saves screenshots under `LAMBS_UI_OUT` (default `/opt/cursor/artifacts/screenshots`).
+
+Or serve statically: `python3 -m http.server 8080 --directory /workspace` → `http://localhost:8080/index.html`.
+
+### Optional dev dependencies
+
+For README screenshots:
+
+```bash
+pnpm screenshots
+```
+
+Python 3 scripts under `scripts/` regenerate embedded germline/stats data in `index.html`; only needed when changing those datasets, not for normal dev/test.
